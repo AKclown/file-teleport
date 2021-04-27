@@ -8,7 +8,7 @@ export class ContentTransfer implements IContentTransfer {
     executeContentTransfer(...args: unknown[]): void {
         /**
          * 1. 获取到当前活动的编辑器窗口, 以及当前展示的窗口
-         * 2. 对选择中的文本及逆行转移，到其他不是活动的文本中, (插入、替换、全部保留)
+         * 2. 对选择中的文本及逆行转移，到其他不是活动的文本中, (插入、替换、删除、 全部保留)
          * 3. 对选择中的文本进行对比，展示不匹配的文本(动态递归)
          */
         try {
@@ -24,11 +24,17 @@ export class ContentTransfer implements IContentTransfer {
 
             // 将内容插入另外编辑器相同内容
             for (const editor of otherEditor) {
+                editor.edit(EditorEdit => { })
             }
             console.log(visibleEditor, '--activeEditor---');
         } catch (error) {
 
         }
+    }
+
+    // todo 匹配文本 (动态规划的方式)
+    compareTextDocument(): void {
+        
     }
 }
 

@@ -11,7 +11,10 @@ export enum COMMANDS {
 // *********************
 
 export class IContentTransfer {
+    
     executeContentTransfer(...args: unknown[]): void;
+
+    compareTextDocument(): void;
 }
 
 
@@ -21,6 +24,7 @@ export class IContentTransfer {
 
 export class IFile {
     executeOpenFile(...args: unknown[]): Promise<void>;
+
 }
 
 
