@@ -1,14 +1,15 @@
-import * as vscode from 'vscode';
-import { executeOpenFile } from './open-file';
-import { executeContentTransfer } from './content-transfer';
+import { ExtensionContext, commands } from 'vscode';
+import { ContentTransfer } from './content-transfer';
+import { FileRelated } from './open-file';
+import { COMMANDS } from './type';
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate(context: ExtensionContext) {
 
-	// 
-	const transferDisposable = vscode.commands.registerCommand('file.teleport.contentTransfer', executeContentTransfer);
+	const transferInstant = new ContentTransfer();
+	const transferDisposable = commands.registerCommand(COMMANDS.CONTENT_TRANSFER, transferInstant.executeContentTransfer);
 
-
-	const openFileDisposable = vscode.commands.registerCommand('file.teleport.openFile', executeOpenFile);
+	const fileInstant = new FileRelated();
+	const openFileDisposable = commands.registerCommand(COMMANDS.OPEN_FILE, fileInstant.executeOpenFile);
 
 	context.subscriptions.push(
 		transferDisposable,
