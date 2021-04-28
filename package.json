@@ -12,21 +12,33 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:file.teleport.contentTransfer",
-		"onCommand:file.teleport.openFile"
+		"onCommand:file.teleport.openFile",
+		"onCommand:file.teleport.default",
+		"onCommand:file.teleport.insert",
+		"onCommand:file.teleport.replace"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
 				"category": "File Teleport",
-				"command": "file.teleport.contentTransfer",
-				"title": "File Content Transfer"
+				"command": "file.teleport.openFile",
+				"title": "Select for Content Transfer"
 			},
 			{
 				"category": "File Teleport",
-				"command": "file.teleport.openFile",
-				"title": "Select for Content Transfer"
+				"command": "file.teleport.default",
+				"title": "Default"
+			},
+			{
+				"category": "File Teleport",
+				"command": "file.teleport.insert",
+				"title": "Insert Text"
+			},
+			{
+				"category": "File Teleport",
+				"command": "file.teleport.replace",
+				"title": "Replace Text"
 			}
 		],
 		"configuration": [
@@ -77,12 +89,35 @@
 			],
 			"editor/context": [
 				{
-					"command": "file.teleport.contentTransfer",
+					"submenu": "file.teleport.editor.context",
 					"group": "1_modification",
 					"when": "editorHasSelection"
 				}
+			],
+			"file.teleport.editor.context": [
+				{
+					"command": "file.teleport.default",
+					"group": "1_modification",
+					"when": "editorTextFocus"
+				},
+				{
+					"command": "file.teleport.insert",
+					"group": "1_modification",
+					"when": "editorTextFocus"
+				},
+				{
+					"command": "file.teleport.replace",
+					"group": "1_modification@1",
+					"when": "editorTextFocus"
+				}
 			]
-		}
+		},
+		"submenus": [
+			{
+				"id": "file.teleport.editor.context",
+				"label": "File Content Transfer"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "yarn run compile",

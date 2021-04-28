@@ -6,13 +6,33 @@ import { COMMANDS } from './type';
 export function activate(context: ExtensionContext) {
 
 	const transferInstant = new ContentTransfer();
-	const transferDisposable = commands.registerCommand(COMMANDS.CONTENT_TRANSFER, transferInstant.executeContentTransfer);
+	const defaultDisposable = commands.registerCommand(
+		COMMANDS.FILE_TELEPORT_DEFAULT,
+		transferInstant.executeDefault,
+		transferInstant
+	);
+	const insertDisposable = commands.registerCommand(
+		COMMANDS.FILE_TELEPORT_INSERT,
+		transferInstant.executeInsert,
+		transferInstant
+	);
+	const replaceDisposable = commands.registerCommand(
+		COMMANDS.FILE_TELEPORT_REPLACE,
+		transferInstant.executeReplace,
+		transferInstant
+	);
 
 	const fileInstant = new FileRelated();
-	const openFileDisposable = commands.registerCommand(COMMANDS.OPEN_FILE, fileInstant.executeOpenFile);
+	const openFileDisposable = commands.registerCommand(
+		COMMANDS.OPEN_FILE,
+		fileInstant.executeOpenFile,
+		fileInstant
+	);
 
 	context.subscriptions.push(
-		transferDisposable,
+		defaultDisposable,
+		insertDisposable,
+		replaceDisposable,
 		openFileDisposable
 	);
 }
