@@ -1,7 +1,7 @@
 import { ExtensionContext, commands } from 'vscode';
-import { ContentTransfer } from './content-transfer';
-import { FileRelated } from './open-file';
-import { COMMANDS } from './type';
+import { COMMANDS } from './constant';
+import { ContentTransfer } from './ContentTransfer';
+import { FileRelated } from './OpenFile';
 
 export function activate(context: ExtensionContext) {
 

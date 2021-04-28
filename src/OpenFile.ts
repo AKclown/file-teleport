@@ -1,7 +1,8 @@
 import { workspace, window, ViewColumn } from 'vscode';
-import { IFile } from './type';
+import { BaseClass } from './BaseClass';
+import { IFile } from './interface/OpenFile.interface';
 
-export class FileRelated implements IFile {
+export class FileRelated extends BaseClass implements IFile {
     async executeOpenFile(...args: any[]): Promise<void> {
         /**
          * 1.如果只选择一个文件，提示需要选择两个文件

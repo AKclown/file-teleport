@@ -1,5 +1,16 @@
 
 // *********************
+// commands
+// *********************
+
+export enum COMMANDS {
+    FILE_TELEPORT_DEFAULT = 'file.teleport.default',
+    FILE_TELEPORT_INSERT = 'file.teleport.insert',
+    FILE_TELEPORT_REPLACE = 'file.teleport.replace',
+    OPEN_FILE = 'file.teleport.openFile'
+}
+
+// *********************
 // Default Function
 // *********************
 

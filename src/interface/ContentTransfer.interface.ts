@@ -1,20 +1,5 @@
 import { Range, TextEditor } from "vscode";
 
-// *********************
-// commands
-// *********************
-
-export enum COMMANDS {
-    FILE_TELEPORT_DEFAULT = 'file.teleport.default',
-    FILE_TELEPORT_INSERT = 'file.teleport.insert',
-    FILE_TELEPORT_REPLACE = 'file.teleport.replace',
-    OPEN_FILE = 'file.teleport.openFile'
-}
-
-// *********************
-// ContentTransfer 
-// *********************
-
 export interface IContentTransfer {
 
     compareTextDocument(): void;
@@ -31,21 +16,6 @@ export interface IContentTransfer {
 
     isTextEnd(activeEditor: TextEditor, range: Range): boolean;
 }
-
-
-// *********************
-// OpenFile 
-// *********************
-
-export interface IFile {
-    executeOpenFile(...args: unknown[]): Promise<void>;
-
-}
-
-
-// *********************
-// type
-// *********************
 
 export type ReturnRelatedEditor = {
     activeEditor: TextEditor;

@@ -1,9 +1,10 @@
 import { window, Range, TextEditor, Position } from 'vscode';
-import { IContentTransfer, ReturnRelatedData, ReturnRelatedEditor } from './type';
-import { asyncForEach } from './utility';
+import { IContentTransfer, ReturnRelatedData, ReturnRelatedEditor } from './interface/ContentTransfer.interface';
+import { asyncForEach } from './constant';
+import { BaseClass } from './BaseClass';
 
 // $ 执行文件转移
-export class ContentTransfer implements IContentTransfer {
+export class ContentTransfer extends BaseClass implements IContentTransfer {
     /**
      * 1. 获取到当前活动的编辑器窗口, 以及当前展示的窗口
      * 2. 对选择中的文本及逆行转移，到其他不是活动的文本中, (插入、替换、删除、 全部保留)
