@@ -45,12 +45,6 @@
 			{
 				"title": "FileTeleport",
 				"properties": {
-					"Enable multiple file synchronization": {
-						"type": "boolean",
-						"default": false,
-						"description": "是否开启多文件同步",
-						"scope": "window"
-					},
 					"Multiple files": {
 						"type": "array",
 						"items": {
@@ -58,22 +52,6 @@
 						},
 						"default": [],
 						"description": "配置多个文件路径(当前选中文件目录下的同级子文件,不存在则创建)",
-						"scope": "window"
-					},
-					"Update Mode": {
-						"type": "string",
-						"enum": [
-							"Replace with old",
-							"Keep the old",
-							"Keep both"
-						],
-						"enumDescriptions": [
-							"无论数据是否更新都强制替换旧的数据",
-							"更新数据在另一个文件具有相同数据则保留原有的",
-							"保留新的数据和旧数据"
-						],
-						"default": "Keep both",
-						"description": "Update file method ",
 						"scope": "window"
 					}
 				}

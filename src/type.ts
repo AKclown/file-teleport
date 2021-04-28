@@ -49,7 +49,6 @@ export interface IFile {
 
 export type ReturnRelatedEditor = {
     activeEditor: TextEditor;
-    visibleEditor: Array<TextEditor>;
     otherEditor: Array<TextEditor>;
 }
 
@@ -57,23 +56,3 @@ export type ReturnRelatedData = {
     ranges: Array<Range>;
     texts: Array<string>;
 }
-
-// *********************
-// Utilities
-// *********************
-
-export type PropType<T, P extends keyof T> = T[P];
-
-export type RequiredSome<T, K extends keyof T> = Partial<T> & Pick<T, K>
-
-export type Unpacked<T> = T extends (infer U)[] ? U : T;
-
-
-
-
-
-
-
-
-
-

@@ -1,5 +1,6 @@
 import { window, Range, TextEditor, Position } from 'vscode';
 import { IContentTransfer, ReturnRelatedData, ReturnRelatedEditor } from './type';
+import { asyncForEach } from './utility';
 
 // $ 执行文件转移
 export class ContentTransfer implements IContentTransfer {
@@ -15,7 +16,7 @@ export class ContentTransfer implements IContentTransfer {
     // 执行默认操作
     executeDefault(...args: unknown[]): void {
         try {
-            const { activeEditor, visibleEditor, otherEditor } = this.getRelatedEditor();
+            const { activeEditor, otherEditor } = this.getRelatedEditor();
             const { ranges, texts } = this.getRelatedData(activeEditor);
 
             // 将内容插入另外编辑器相同内容
@@ -53,29 +54,39 @@ export class ContentTransfer implements IContentTransfer {
         }
     }
 
-    // todo 执行替换操作 
+    // 执行替换操作 
     executeReplace(...args: unknown[]): void {
         try {
             /**
              * 1. 判断选中的是否已经到行末尾了，整行替换
              * 2. 如果target窗口目标文本也有选中的文本，那么应该替换target选中的文本 (解决key:value场景下，我只需要替换key或者value的需求)
-             * todo 3. 允许选择多个key或者value，或者其他替换
+             * 3. 允许选择多个key或者value，或者其他替换
              */
             const { activeEditor, otherEditor } = this.getRelatedEditor();
             const { ranges, texts } = this.getRelatedData(activeEditor);
             // 将内容插入另外编辑器相同内容
             for (const editor of otherEditor) {
+                // 目标窗口的ranges     (这个可能没有选中)
                 const { ranges: targetRanges } = this.getRelatedData(editor);
-                console.log(targetRanges, 'targetRanges---');
 
-                targetRanges.forEach((targetRange, index) => {
-                    const { start, end } = targetRange;
-
-                    const replaceRange = start.line === end.line && start.character === end.character
-                        ? ranges[index] : targetRange;
-
-                    editor.edit(editorContext => editorContext.replace(replaceRange, texts[index]))
-                })
+                if (targetRanges.length === 0) {
+                    // 这里必须await，不然只会保留第一次
+                    asyncForEach<Range, Promise<void>>(ranges, async (range: Range, index: number) => {
+                        // 需要判断range是否已经是末尾了,是需要将替换的整行都替换，而不是部分
+                        let isTextEnd = this.isTextEnd(activeEditor, range);
+                        let replaceRange = range;
+                        if (isTextEnd) {
+                            const endPosition = new Position(range.end.line, editor.document.lineAt(range.end.line).text.length);
+                            replaceRange = replaceRange.with(replaceRange.start, endPosition)
+                        }
+                        await editor.edit(editorContext => editorContext.replace(replaceRange, texts[index]))
+                    })
+                } else {
+                    // 替换掉选中的文本
+                    asyncForEach<Range, Promise<void>>(targetRanges, async (range: Range, index: number) => {
+                        await editor.edit(editorContext => editorContext.replace(range, texts[index]))
+                    })
+                }
             }
         } catch (error) {
             // todo,错误日志系统 (弹窗映射到github)
@@ -88,18 +99,20 @@ export class ContentTransfer implements IContentTransfer {
 
     // 获取到相关编辑器
     getRelatedEditor(): ReturnRelatedEditor {
-        const activeEditor = window.activeTextEditor!;
-        const visibleEditor = window.visibleTextEditors;
+        // const activeEditor = window.activeTextEditor!;
+        const [activeEditor, ...otherEditor] = window.visibleTextEditors;
+
         // 将活动的编辑器过滤掉
-        const otherEditor = visibleEditor.filter(editor => editor.document.fileName !== activeEditor?.document.fileName);
-        return { activeEditor, visibleEditor, otherEditor }
+        // const otherEditor = visibleEditor.filter(editor => editor.document.fileName !== activeEditor?.document.fileName);
+        return { activeEditor, otherEditor }
     }
 
     // 获取到相关的数据
     getRelatedData(activeEditor: TextEditor): ReturnRelatedData {
         let selections = activeEditor.selections;
         let filterSelections = selections.filter(selection => selection.start.line !== selection.end.line ||
-            selection.start.character !== selection.end.character);
+            selection.start.character !== selection.end.character)
+        filterSelections.sort((pre, next) => pre.start.line - next.start.line);
         let ranges: Array<Range> = [];
         let texts: Array<string> = []
         filterSelections.forEach(selection => {
