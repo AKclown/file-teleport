@@ -1,10 +1,9 @@
-
 // *********************
 // commands
 // *********************
 
 export enum COMMANDS {
-    FILE_TELEPORT_DEFAULT = 'file.teleport.default',
+    FILE_TELEPORT_UPDATE = 'file.teleport.update',
     FILE_TELEPORT_INSERT = 'file.teleport.insert',
     FILE_TELEPORT_REPLACE = 'file.teleport.replace',
     OPEN_FILE = 'file.teleport.openFile'
@@ -21,7 +20,6 @@ export async function asyncForEach<T, K>(
         await callback(array[index], index, array)
     }
 }
-
 
 // *********************
 //  Utility Types

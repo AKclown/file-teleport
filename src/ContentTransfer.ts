@@ -3,19 +3,14 @@ import { IContentTransfer, ReturnRelatedData, ReturnRelatedEditor } from './inte
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
 
-// $ 执行文件转移
 export class ContentTransfer extends BaseClass implements IContentTransfer {
-    /**
-     * 1. 获取到当前活动的编辑器窗口, 以及当前展示的窗口
-     * 2. 对选择中的文本及逆行转移，到其他不是活动的文本中, (插入、替换、删除、 全部保留)
-     * 3. 对选择中的文本进行对比，展示不匹配的文本(动态递归)
-     */
+
     // *********************
     // Execute function 
     // *********************
 
-    // 执行默认操作
-    executeDefault(...args: unknown[]): void {
+    // 执行更新操作
+    executeUpdate(...args: unknown[]): void {
         try {
             const { activeEditor, otherEditor } = this.getRelatedEditor();
             const { ranges, texts } = this.getRelatedData(activeEditor);
@@ -33,7 +28,7 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
     executeInsert(...args: unknown[]): void {
         try {
             /**
-             * 1.判断选中的是否已经到行末尾了，如果是插入时需要换行
+             * 1. 判断选中的是否已经到行末尾了，如果是插入时需要换行
              * 2. 多行同时插入
              */
             const { activeEditor, otherEditor } = this.getRelatedEditor();
@@ -100,11 +95,10 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
 
     // 获取到相关编辑器
     getRelatedEditor(): ReturnRelatedEditor {
-        // const activeEditor = window.activeTextEditor!;
-        const [activeEditor, ...otherEditor] = window.visibleTextEditors;
-
+        const activeEditor = window.activeTextEditor!;
+        const visibleEditor = window.visibleTextEditors;
         // 将活动的编辑器过滤掉
-        // const otherEditor = visibleEditor.filter(editor => editor.document.fileName !== activeEditor?.document.fileName);
+        const otherEditor = visibleEditor.filter(editor => editor.document.fileName !== activeEditor?.document.fileName);
         return { activeEditor, otherEditor }
     }
 

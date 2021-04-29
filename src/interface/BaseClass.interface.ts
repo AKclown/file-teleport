@@ -1,8 +1,8 @@
 import { TextEditor } from 'vscode';
 
 export interface IBaseClass {
-    originEditor: TextEditor;
-    targetEditor: Array<TextEditor>;
+    originEditor: TextEditor | undefined;
+    targetEditor: Map<string, TextEditor>;
 
     changeOriginEditor():void;
 

@@ -4,7 +4,7 @@ export interface IContentTransfer {
 
     compareTextDocument(): void;
 
-    executeDefault(...args: unknown[]): void;
+    executeUpdate(...args: unknown[]): void;
 
     executeInsert(...args: unknown[]): void;
 

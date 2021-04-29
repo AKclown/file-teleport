@@ -2,7 +2,6 @@
 	"name": "file-teleport",
 	"displayName": "File Teleport",
 	"description": "The contents of one file are transferred to other files",
-	"repository": "https://github.com/AKclown/file-teleport.git",
 	"version": "0.0.1",
 	"publisher": "AKclown",
 	"engines": {
@@ -11,9 +10,21 @@
 	"categories": [
 		"Other"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/AKclown/file-teleport.git"
+	},
+	"bugs": {
+		"url": "https://github.com/AKclown/file-teleport/issues"
+	},
+	"keywords": [
+		"file teleport",
+		"file content",
+		"transfer"
+	],
 	"activationEvents": [
 		"onCommand:file.teleport.openFile",
-		"onCommand:file.teleport.default",
+		"onCommand:file.teleport.update",
 		"onCommand:file.teleport.insert",
 		"onCommand:file.teleport.replace"
 	],
@@ -27,8 +38,8 @@
 			},
 			{
 				"category": "File Teleport",
-				"command": "file.teleport.default",
-				"title": "Default"
+				"command": "file.teleport.update",
+				"title": "Update Text"
 			},
 			{
 				"category": "File Teleport",
@@ -74,7 +85,7 @@
 			],
 			"file.teleport.editor.context": [
 				{
-					"command": "file.teleport.default",
+					"command": "file.teleport.update",
 					"group": "1_modification",
 					"when": "editorTextFocus"
 				},
@@ -94,6 +105,26 @@
 			{
 				"id": "file.teleport.editor.context",
 				"label": "File Content Transfer"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "file.teleport.update",
+				"key": "alt+r",
+				"mac": "alt+r",
+				"when": "editorHasSelection"
+			},
+			{
+				"command": "file.teleport.insert",
+				"key": "alt+t",
+				"mac": "alt+t",
+				"when": "editorHasSelection"
+			},
+			{
+				"command": "file.teleport.replace",
+				"key": "alt+y",
+				"mac": "alt+y",
+				"when": "editorHasSelection"
 			}
 		]
 	},
