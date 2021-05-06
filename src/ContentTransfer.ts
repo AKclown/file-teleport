@@ -1,28 +1,96 @@
-import { window, Range, TextEditor, Position } from 'vscode';
-import { IContentTransfer, ReturnRelatedData, ReturnRelatedEditor } from './interface/ContentTransfer.interface';
+import { window, Range, TextEditor, Position, QuickPickItem } from 'vscode';
+import { IContentTransfer, OPERATE, ReturnRelatedData, ReturnRelatedEditor } from './interface/ContentTransfer.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
+import { diffLines } from 'diff'
 
 export class ContentTransfer extends BaseClass implements IContentTransfer {
+
+    // 区域 对比区域->更新区域
+    operate: ({ value: number } & QuickPickItem) | undefined = undefined;
+    // 分割符
+    delimiter: string = '';
 
     // *********************
     // Execute function 
     // *********************
 
+    // 组装数据
+    assembleData(texts: string[]) {
+        
+        // switch(this.operate?.value){
+        //     case 
+        // }
+    }
+
     // 执行更新操作
-    executeUpdate(...args: unknown[]): void {
+    async executeUpdate(...args: unknown[]): Promise<void> {
         try {
+
+            // let originTexts = [];
+
+            // this.assembleData(originTexts);
+
+
+            // 分割符
+            let delimiter = '';
+
+            // 匹配操作
+            this.operate = await window.showQuickPick<{ value: number } & QuickPickItem>(
+                [
+                    {
+                        label: OPERATE[0],
+                        value: OPERATE['Left  ->  Left']
+                    }, {
+                        label: OPERATE[1],
+                        value: OPERATE['Left  ->  Right']
+                    }, {
+                        label: OPERATE[2],
+                        value: OPERATE['Left  ->  All']
+                    }, {
+                        label: OPERATE[3],
+                        value: OPERATE['Right ->  Left']
+                    }, {
+                        label: OPERATE[4],
+                        value: OPERATE['Right ->  Right']
+                    }, {
+                        label: OPERATE[5],
+                        value: OPERATE['Right ->  All']
+                    }, {
+                        label: OPERATE[6],
+                        value: OPERATE['All   ->  Left']
+                    }, {
+                        label: OPERATE[7],
+                        value: OPERATE['All   ->  Right']
+                    }, {
+                        label: OPERATE[8],
+                        value: OPERATE['All   ->  All']
+                    },
+                ], { placeHolder: '选择对比区域 -> 更新区域（行为单位）' });
+
+            if (this.operate?.value !== OPERATE['All   ->  All']) {
+                // 匹配模式， 分割符， 以分隔符为中线， 条件 左/右/全部 ;  更新 左/右/全部
+                delimiter = await window.showInputBox({ placeHolder: '分隔符' }) || '';
+            }
+
+            // 进行数据组装
             const { activeEditor, otherEditor } = this.getRelatedEditor();
             const { ranges, texts } = this.getRelatedData(activeEditor);
 
-            // 将内容插入另外编辑器相同内容
-            for (const editor of otherEditor) {
-                editor.edit(editorContext => { })
-            }
+            this.assembleData(texts);
+
+            console.log(ranges, 'ranges');
+            console.log(texts,'texts');
+            
+            // // 将内容插入另外编辑器相同内容
+            // for (const editor of otherEditor) {
+            //     editor.edit(editorContext => { })
+            // }
         } catch (error) {
             // todo,错误日志系统 (弹窗映射到github)
         }
     }
+
 
     // 执行插入操作
     executeInsert(...args: unknown[]): void {
@@ -127,6 +195,8 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
         // 选择的位置大于当前行默认位置，即已经到了文本末尾
         return selectEndPosition >= endPosition ? true : false;
     }
+
+
 
 
     // todo 匹配文本 (动态规划的方式  Histogram algorithm)

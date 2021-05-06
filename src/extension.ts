@@ -41,7 +41,7 @@ export function activate(context: ExtensionContext) {
 		// *********************
 		// 记录origin editor，提供给快捷键操作的时候
 		const selectDisposable = window.onDidChangeTextEditorSelection((evt: TextEditorSelectionChangeEvent) => {
-			console.log(evt);
+			// console.log(evt);
 		})
 
 		// *********************
