@@ -1,7 +1,10 @@
-export class Filed {
+export class Field {
     private _left: string;
     private _right: string;
     private _all: string;
+
+    private _status: 'ADD' | 'DEL' | 'NO' = 'NO';
+
     constructor(left: string, right: string, all: string) {
         this._left = left;
         this._right = right;
@@ -9,15 +12,14 @@ export class Filed {
     }
 
     get left(): string {
-		return this._left;
-	}
-	
-	get right(): string {
-		return this._right;
-	}
-	
-	get verb(): string {
-		return this._all;
-	}
+        return this._left;
+    }
 
+    get right(): string {
+        return this._right;
+    }
+
+    get all(): string {
+        return this._all;
+    }
 }
