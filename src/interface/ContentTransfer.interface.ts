@@ -1,4 +1,9 @@
+import { type } from "node:os";
 import { Range, TextEditor } from "vscode";
+
+// *********************
+// class interface
+// *********************
 
 export interface IContentTransfer {
 
@@ -17,6 +22,10 @@ export interface IContentTransfer {
     isTextEnd(activeEditor: TextEditor, range: Range): boolean;
 }
 
+// *********************
+// type 
+// *********************
+
 export type ReturnRelatedEditor = {
     activeEditor: TextEditor;
     otherEditor: Array<TextEditor>;
@@ -27,6 +36,25 @@ export type ReturnRelatedData = {
     texts: Array<string>;
 }
 
+export type AddTextParams = {
+    originTexts: Array<string>;
+    targetTexts: Array<string>;
+    originLine: number;
+    targetLine: number;
+    originStartLine: number;
+    originEndLine: number;
+    targetStartLine: number;
+    targetEndLine: number;
+}
+
+export type DeleteTextParams = {
+    texts: Array<string>;
+    line: number;
+    originStartLine: number;
+    originEndLine: number;
+    targetStartLine: number;
+    targetEndLine: number;
+}
 
 // *********************
 // operate enum 

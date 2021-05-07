@@ -1,5 +1,5 @@
 import { window, Range, TextEditor, Position, QuickPickItem } from 'vscode';
-import { IContentTransfer, OPERATE, ReturnRelatedData, ReturnRelatedEditor } from './interface/ContentTransfer.interface';
+import { AddTextParams, DeleteTextParams, IContentTransfer, OPERATE, ReturnRelatedData, ReturnRelatedEditor } from './interface/ContentTransfer.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
 import { diffLines, Change } from 'diff'
@@ -24,7 +24,6 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
              */
             const { activeEditor, otherEditor } = this.getRelatedEditor();
             const { ranges, texts } = this.getRelatedData(activeEditor);
-            console.log(ranges, 'range');
 
             // 将内容插入另外编辑器相同内容
             for (const editor of otherEditor) {
@@ -80,9 +79,14 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
         }
     }
 
-    // 执行更新操作
+    // 执行更新操作  (todo: 两者行数不一致，多选择区域)
     async executeUpdate(...args: unknown[]): Promise<void> {
         try {
+
+            /**
+             * 1. 选择区域 -> 更新区域
+             * 2. 当选择区域为分割区域即不是all的时候，加上对比行数又不一致时，进行整行更新，而不是更新区域
+             */
 
             // 匹配操作
             this.operate = await window.showQuickPick<{ value: number } & QuickPickItem>(
@@ -126,9 +130,13 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
             const { activeEditor, otherEditor } = this.getRelatedEditor();
             const { ranges, texts } = this.getRelatedData(activeEditor);
 
+            const originStartLine = ranges[0].start.line;
+            const originEndLine = ranges[0].end.line;
+
             // todo 生成files
             let originFiles = this.generalFields(texts);
-            let originStartLine = ranges[0].start.line;
+            let originTexts = texts[0].split('\n');
+
             // 组装数据
             let originCompareText = this.assembleCompareData(originFiles)
 
@@ -137,11 +145,16 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
                 // 目标窗口的ranges     (这个可能没有选中)
                 const { ranges: targetRanges, texts: targetTexts } = this.getRelatedData(editor);
 
-                // 对比相同
-                let targetStartLine = targetRanges[0].start.line;
+                const targetStartLine = targetRanges[0].start.line;
+                const targetEndLine = targetRanges[0].end.line;
 
-                let addStartLine = targetStartLine;
-                let deleteStartLine = targetStartLine;
+                let targetText = targetTexts[0].split('\n');
+
+
+                // 对比的行数记录
+                let originLine = 0;
+                let addLine = 0;
+                let deleteLine = 0;
 
                 // 生成files
                 let targetFiles = this.generalFields(targetTexts);
@@ -150,24 +163,49 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
                 // 对比不同
                 let diffText = diffLines(targetCompareText, originCompareText);
 
-                asyncForEach<Change, Promise<void>>(diffText, async (item: Change, index: number) => {
+                console.log(diffText, 'diffText----=-=-=');
+
+                // 造出数据来，一次性replace掉
+                diffText.forEach(item => {
                     // 判断数据是否更改了 (行数需要移动)
                     if (item.removed) {
-                        await asyncForEach<number, Promise<void>>(new Array(item.count).fill(0), async () => {
-                            deleteStartLine = await this.removeText(editor, deleteStartLine);
+                        Array.from({ length: item.count ?? 0 }).forEach(() => {
+
+                            const params = {
+                                texts: targetText,
+                                line: deleteLine,
+                                originStartLine,
+                                originEndLine,
+                                targetStartLine,
+                                targetEndLine
+                            }
+                            const result = this.removeText(params);
+                            targetText = result.texts;
+                            deleteLine = result.line;
                         })
                     } else if (item.added) {
-                        await asyncForEach<number, Promise<void>>(new Array(item.count).fill(0), async () => {
-                            const result = await this.addText(activeEditor, editor, originStartLine, addStartLine);
-                            originStartLine = result.originStartLine;
-                            addStartLine = result.addStartLine;
+                        Array.from({ length: item.count ?? 0 }).forEach(() => {
+                            const params = {
+                                originTexts,
+                                originLine,
+                                targetTexts: targetText,
+                                targetLine: addLine,
+                                originStartLine,
+                                originEndLine,
+                                targetStartLine,
+                                targetEndLine
+                            }
+                            targetText = this.addText(params);
+                            originLine++;
+                            addLine++;
                         })
                     } else {
-                        originStartLine += item?.count ?? 0;
-                        deleteStartLine += item?.count ?? 0;
-                        addStartLine += item?.count ?? 0;
+                        addLine += item.count ?? 0;
+                        deleteLine += item.count ?? 0;
+                        originLine += item.count ?? 0;
                     }
                 })
+                await editor.edit(editorContext => editorContext.replace(targetRanges[0], targetText.join('\n')))
             }
         } catch (error) {
             // todo,错误日志系统 (弹窗映射到github)
@@ -175,96 +213,102 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
     }
 
     // 添加
-    async addText(originEditor: TextEditor, targetEditor: TextEditor, originStartLine: number, addStartLine: number): Promise<{
-        originStartLine: number,
-        addStartLine: number
-    }> {
-
-        let originTextLine = originEditor.document.lineAt(originStartLine);
-        let targetTextLine = targetEditor.document.lineAt(addStartLine);
-
+    addText(params: AddTextParams): Array<string> {
+        // $ 当更新区域时left\right的时候，需要整行更新，直接插入
+        let { originTexts, originLine, targetTexts, targetLine, originStartLine, originEndLine, targetStartLine, targetEndLine } = params;
         switch (this.operate?.value) {
             case OPERATE['Left  ->  Left']:
             case OPERATE['Right ->  Left']:
             case OPERATE['All   ->  Left']: {
-                await targetEditor.edit(editorContext => {
-                    let originSeparate = originTextLine.text.indexOf(this.delimiter);
-                    let point = new Position(addStartLine, 0);
-                    console.log(originTextLine.text);
-                    editorContext.insert(point, originTextLine.text.substring(0, originSeparate));
-                })
+                const originText = originTexts[originLine];
+
+                if (originStartLine + targetLine < targetStartLine) {
+                    // 整行(头部插入，这里需要注意顺序) 0->1...
+                    targetTexts.splice(targetLine, 0, originText);
+                } else if (originStartLine + targetLine > targetEndLine) {
+                    // 整行
+                    targetTexts.splice(targetLine, 0, originText);
+                } else {
+                    // 区域
+                    const separateIndex = originText.indexOf(this.delimiter);
+                    const updatedText = originText.substring(0, separateIndex);
+                    targetTexts[targetLine] = updatedText + targetTexts[targetLine];
+                }
                 break;
             }
             case OPERATE['Left  ->  Right']:
             case OPERATE['Right ->  Right']:
             case OPERATE['All   ->  Right']: {
-                await targetEditor.edit(editorContext => {
-                    let originSeparate = originTextLine.text.indexOf(this.delimiter);
-                    let targetSeparate = targetTextLine.text.indexOf(this.delimiter);
-                    let point = new Position(addStartLine, targetTextLine.text.substring(0, targetSeparate + 1).length);
-                    editorContext.insert(point, originTextLine.text.substring(originSeparate + 1,))
-                })
+                const originText = originTexts[originLine];
+
+                if (originStartLine + targetLine < targetStartLine) {
+                    // 整行(头部插入，这里需要注意顺序) 0->1...
+                    targetTexts.splice(targetLine, 0, originText);
+                } else if (originStartLine + targetLine > targetEndLine) {
+                    // 整行
+                    targetTexts.splice(targetLine, 0, originText);
+                } else {
+                    // 区域
+                    const separateIndex = originText.indexOf(this.delimiter);
+                    const updatedText = originText.substring(separateIndex + 1);
+                    targetTexts[targetLine] = targetTexts[targetLine] + updatedText;
+                }
                 break;
             }
             case OPERATE['Left  ->  All']:
             case OPERATE['Right ->  All']:
             case OPERATE['All   ->  All']: {
-                await targetEditor.edit(editorContext => {
-                    let point = new Position(addStartLine, 0)
-                    editorContext.insert(point, originTextLine.text + '\n');
-                })
+                targetTexts.splice(targetLine, 0, originTexts[originLine])
                 break;
             }
         }
-        originStartLine++;
-        addStartLine++;
-        return { originStartLine, addStartLine };
+        return targetTexts;
     }
 
     // 删除
-    async removeText(editor: TextEditor, startLine: number): Promise<number> {
+    removeText(params: DeleteTextParams): { texts: Array<string>, line: number } {
 
-        let textLine = editor.document.lineAt(startLine);
+        let { texts, line, originStartLine, originEndLine, targetStartLine, targetEndLine } = params;
+
         switch (this.operate?.value) {
             case OPERATE['Left  ->  Left']:
             case OPERATE['Right ->  Left']:
             case OPERATE['All   ->  Left']: {
-                await editor.edit(editorContext => {
-                    let startPosition = new Position(startLine, 0);
-                    let endPosition = new Position(startLine, textLine.text.substring(0, textLine.text.indexOf(this.delimiter)).length);
-                    let range = new Range(startPosition, endPosition);
-                    editorContext.delete(range);
-                })
-                startLine++;
+                // 获取到更新的行数据
+                if (originStartLine > targetStartLine + line) {
+                    // 整行(头部插入，这里需要注意顺序) 0->1...
+                    texts.splice(0, 1);
+                } else if (originStartLine + line > originEndLine) {
+                    // 整行
+                    texts.splice(0, 1);
+                } else {
+                    const text = texts[line];
+                    const separateIndex = text.indexOf(this.delimiter);
+                    let updatedText = text.substring(separateIndex);
+                    texts[line] = updatedText;
+                }
+                line++;
                 break;
             }
             case OPERATE['Left  ->  Right']:
             case OPERATE['Right ->  Right']:
             case OPERATE['All   ->  Right']: {
-                await editor.edit(editorContext => {
-                    let startPosition = new Position(startLine, textLine.text.substring(textLine.text.indexOf(this.delimiter) + 1, textLine.text.length - 1).length);
-                    let endPosition = new Position(startLine, textLine.text.length);
-                    let range = new Range(startPosition, endPosition);
-                    editorContext.delete(range);
-                })
-                startLine++;
+                // 获取到更新的行数据
+                const text = texts[line];
+                const separateIndex = text.indexOf(this.delimiter);
+                let updatedText = text.substring(0, separateIndex + 1);
+                texts[line] = updatedText;
+                line++;
                 break;
             }
             case OPERATE['Left  ->  All']:
             case OPERATE['Right ->  All']:
             case OPERATE['All   ->  All']: {
-                await editor.edit(editorContext => {
-                    // $ 要从上一行的默认开始删除，要不然换行不会被删除掉
-                    let preTextLine = editor.document.lineAt(startLine - 1);
-                    let startPosition = new Position(startLine - 1, preTextLine.text.length);
-                    let endPosition = new Position(startLine, textLine.text.length);
-                    let range = new Range(startPosition, endPosition);
-                    editorContext.delete(range);
-                })
+                texts.splice(line, 1)
                 break;
             }
         }
-        return startLine;
+        return { texts, line };
     }
 
     // 生成fields
