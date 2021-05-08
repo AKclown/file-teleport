@@ -1,4 +1,3 @@
-import { type } from "node:os";
 import { Range, TextEditor } from "vscode";
 
 // *********************
@@ -6,8 +5,6 @@ import { Range, TextEditor } from "vscode";
 // *********************
 
 export interface IContentTransfer {
-
-    compareTextDocument(): void;
 
     executeUpdate(...args: unknown[]): Promise<void>;
 
@@ -40,26 +37,19 @@ export type AddTextParams = {
     originTexts: Array<string>;
     targetTexts: Array<string>;
     originLine: number;
-    targetLine: number;
-    originStartLine: number;
-    originEndLine: number;
-    targetStartLine: number;
-    targetEndLine: number;
+    addLine: number;
 }
 
 export type DeleteTextParams = {
     texts: Array<string>;
     line: number;
-    originStartLine: number;
-    originEndLine: number;
-    targetStartLine: number;
-    targetEndLine: number;
 }
 
 // *********************
 // operate enum 
 // *********************
 
+// 选择区域 + 更新区域
 export enum OPERATE {
     'Left  ->  Left' = 0,
     'Left  ->  Right' = 1,
