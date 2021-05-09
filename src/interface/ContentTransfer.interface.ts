@@ -7,8 +7,6 @@ import { Range, TextEditor } from "vscode";
 
 export interface IContentTransfer {
 
-    compareTextDocument(): void;
-
     executeUpdate(...args: unknown[]): Promise<void>;
 
     executeInsert(...args: unknown[]): void;
@@ -37,39 +35,44 @@ export type ReturnRelatedData = {
 }
 
 export type AddTextParams = {
-    originTexts: Array<string>;
-    targetTexts: Array<string>;
+    originText: Array<string>;
     originLine: number;
-    targetLine: number;
-    originStartLine: number;
-    originEndLine: number;
-    targetStartLine: number;
-    targetEndLine: number;
+    targetText: Array<string>;
+    addLine: number;
 }
 
 export type DeleteTextParams = {
-    texts: Array<string>;
-    line: number;
-    originStartLine: number;
-    originEndLine: number;
-    targetStartLine: number;
-    targetEndLine: number;
+    targetText: Array<string>;
+    deleteLine: number;
+}
+
+export type Field = {
+    left?: string;
+    right?: string;
+    all?: string;
 }
 
 // *********************
 // operate enum 
 // *********************
 
+// 更新:功能砍掉。 这个目前能力还有限
+// export enum OPERATE {
+//     'Left  ->  Left' = 0,
+//     'Left  ->  Right' = 1,
+//     'Left  ->  All' = 2,
+//     'Right ->  Left' = 3,
+//     'Right ->  Right' = 4,
+//     'Right ->  All' = 5,
+//     'All   ->  Left' = 6,
+//     'All   ->  Right' = 7,
+//     'All   ->  All' = 8,
+// }
+
 export enum OPERATE {
-    'Left  ->  Left' = 0,
-    'Left  ->  Right' = 1,
-    'Left  ->  All' = 2,
-    'Right ->  Left' = 3,
-    'Right ->  Right' = 4,
-    'Right ->  All' = 5,
-    'All   ->  Left' = 6,
-    'All   ->  Right' = 7,
-    'All   ->  All' = 8,
+    'Left  ->  All' = 0,
+    'Right ->  All' = 1,
+    'All   ->  All' = 2,
 }
 
 

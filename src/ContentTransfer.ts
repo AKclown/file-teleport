@@ -1,9 +1,8 @@
 import { window, Range, TextEditor, Position, QuickPickItem } from 'vscode';
-import { AddTextParams, DeleteTextParams, IContentTransfer, OPERATE, ReturnRelatedData, ReturnRelatedEditor } from './interface/ContentTransfer.interface';
+import { AddTextParams, DeleteTextParams, Field, IContentTransfer, OPERATE, ReturnRelatedData, ReturnRelatedEditor } from './interface/ContentTransfer.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
-import { diffLines, Change } from 'diff'
-import { Field } from './Field';
+import { diffLines } from 'diff'
 
 export class ContentTransfer extends BaseClass implements IContentTransfer {
 
@@ -84,58 +83,18 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
         try {
 
             /**
-             * 1. 选择区域 -> 更新区域
-             * 2. 当选择区域为分割区域即不是all的时候，加上对比行数又不一致时，进行整行更新，而不是更新区域
+             * 1. 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
              */
 
-            // 匹配操作
-            this.operate = await window.showQuickPick<{ value: number } & QuickPickItem>(
-                [
-                    {
-                        label: OPERATE[0],
-                        value: OPERATE['Left  ->  Left']
-                    }, {
-                        label: OPERATE[1],
-                        value: OPERATE['Left  ->  Right']
-                    }, {
-                        label: OPERATE[2],
-                        value: OPERATE['Left  ->  All']
-                    }, {
-                        label: OPERATE[3],
-                        value: OPERATE['Right ->  Left']
-                    }, {
-                        label: OPERATE[4],
-                        value: OPERATE['Right ->  Right']
-                    }, {
-                        label: OPERATE[5],
-                        value: OPERATE['Right ->  All']
-                    }, {
-                        label: OPERATE[6],
-                        value: OPERATE['All   ->  Left']
-                    }, {
-                        label: OPERATE[7],
-                        value: OPERATE['All   ->  Right']
-                    }, {
-                        label: OPERATE[8],
-                        value: OPERATE['All   ->  All']
-                    },
-                ], { placeHolder: '选择对比区域 -> 更新区域（行为单位）' });
-
-            if (this.operate?.value !== OPERATE['All   ->  All']) {
-                // 匹配模式， 分割符， 以分隔符为中线， 条件 左/右/全部 ;  更新 左/右/全部
-                this.delimiter = await window.showInputBox({ placeHolder: '分隔符' }) || '';
-            }
+            await this.getCondition();
 
             // 进行数据组装
             const { activeEditor, otherEditor } = this.getRelatedEditor();
             const { ranges, texts } = this.getRelatedData(activeEditor);
 
-            const originStartLine = ranges[0].start.line;
-            const originEndLine = ranges[0].end.line;
-
             // todo 生成files
-            let originFiles = this.generalFields(texts);
-            let originTexts = texts[0].split('\n');
+            let originText = texts[0].split('\n');
+            let originFiles = this.generalFields(originText);
 
             // 组装数据
             let originCompareText = this.assembleCompareData(originFiles)
@@ -145,11 +104,7 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
                 // 目标窗口的ranges     (这个可能没有选中)
                 const { ranges: targetRanges, texts: targetTexts } = this.getRelatedData(editor);
 
-                const targetStartLine = targetRanges[0].start.line;
-                const targetEndLine = targetRanges[0].end.line;
-
                 let targetText = targetTexts[0].split('\n');
-
 
                 // 对比的行数记录
                 let originLine = 0;
@@ -157,47 +112,37 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
                 let deleteLine = 0;
 
                 // 生成files
-                let targetFiles = this.generalFields(targetTexts);
+                let targetFiles = this.generalFields(targetText);
                 // 组装数据
                 let targetCompareText = this.assembleCompareData(targetFiles);
                 // 对比不同
                 let diffText = diffLines(targetCompareText, originCompareText);
-
-                console.log(diffText, 'diffText----=-=-=');
 
                 // 造出数据来，一次性replace掉
                 diffText.forEach(item => {
                     // 判断数据是否更改了 (行数需要移动)
                     if (item.removed) {
                         Array.from({ length: item.count ?? 0 }).forEach(() => {
-
                             const params = {
-                                texts: targetText,
-                                line: deleteLine,
-                                originStartLine,
-                                originEndLine,
-                                targetStartLine,
-                                targetEndLine
+                                targetText,
+                                deleteLine
                             }
-                            const result = this.removeText(params);
-                            targetText = result.texts;
-                            deleteLine = result.line;
+                            const result = this.deleteText(params);
+                            targetText = result.targetText;
+                            deleteLine = result.deleteLine;
                         })
                     } else if (item.added) {
                         Array.from({ length: item.count ?? 0 }).forEach(() => {
                             const params = {
-                                originTexts,
+                                originText,
                                 originLine,
-                                targetTexts: targetText,
-                                targetLine: addLine,
-                                originStartLine,
-                                originEndLine,
-                                targetStartLine,
-                                targetEndLine
+                                targetText,
+                                addLine
                             }
                             targetText = this.addText(params);
                             originLine++;
                             addLine++;
+                            deleteLine++;
                         })
                     } else {
                         addLine += item.count ?? 0;
@@ -215,128 +160,54 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
     // 添加
     addText(params: AddTextParams): Array<string> {
         // $ 当更新区域时left\right的时候，需要整行更新，直接插入
-        let { originTexts, originLine, targetTexts, targetLine, originStartLine, originEndLine, targetStartLine, targetEndLine } = params;
-        switch (this.operate?.value) {
-            case OPERATE['Left  ->  Left']:
-            case OPERATE['Right ->  Left']:
-            case OPERATE['All   ->  Left']: {
-                const originText = originTexts[originLine];
-
-                if (originStartLine + targetLine < targetStartLine) {
-                    // 整行(头部插入，这里需要注意顺序) 0->1...
-                    targetTexts.splice(targetLine, 0, originText);
-                } else if (originStartLine + targetLine > targetEndLine) {
-                    // 整行
-                    targetTexts.splice(targetLine, 0, originText);
-                } else {
-                    // 区域
-                    const separateIndex = originText.indexOf(this.delimiter);
-                    const updatedText = originText.substring(0, separateIndex);
-                    targetTexts[targetLine] = updatedText + targetTexts[targetLine];
-                }
-                break;
-            }
-            case OPERATE['Left  ->  Right']:
-            case OPERATE['Right ->  Right']:
-            case OPERATE['All   ->  Right']: {
-                const originText = originTexts[originLine];
-
-                if (originStartLine + targetLine < targetStartLine) {
-                    // 整行(头部插入，这里需要注意顺序) 0->1...
-                    targetTexts.splice(targetLine, 0, originText);
-                } else if (originStartLine + targetLine > targetEndLine) {
-                    // 整行
-                    targetTexts.splice(targetLine, 0, originText);
-                } else {
-                    // 区域
-                    const separateIndex = originText.indexOf(this.delimiter);
-                    const updatedText = originText.substring(separateIndex + 1);
-                    targetTexts[targetLine] = targetTexts[targetLine] + updatedText;
-                }
-                break;
-            }
-            case OPERATE['Left  ->  All']:
-            case OPERATE['Right ->  All']:
-            case OPERATE['All   ->  All']: {
-                targetTexts.splice(targetLine, 0, originTexts[originLine])
-                break;
-            }
-        }
-        return targetTexts;
+        let { originText, originLine, targetText, addLine } = params;
+        targetText.splice(addLine, 0, originText[originLine])
+        return targetText;
     }
 
     // 删除
-    removeText(params: DeleteTextParams): { texts: Array<string>, line: number } {
+    deleteText(params: DeleteTextParams): { targetText: Array<string>, deleteLine: number } {
+        const { targetText, deleteLine } = params;
+        targetText.splice(deleteLine, 1)
+        return { targetText, deleteLine };
+    }
 
-        let { texts, line, originStartLine, originEndLine, targetStartLine, targetEndLine } = params;
 
-        switch (this.operate?.value) {
-            case OPERATE['Left  ->  Left']:
-            case OPERATE['Right ->  Left']:
-            case OPERATE['All   ->  Left']: {
-                // 获取到更新的行数据
-                if (originStartLine > targetStartLine + line) {
-                    // 整行(头部插入，这里需要注意顺序) 0->1...
-                    texts.splice(0, 1);
-                } else if (originStartLine + line > originEndLine) {
-                    // 整行
-                    texts.splice(0, 1);
-                } else {
-                    const text = texts[line];
-                    const separateIndex = text.indexOf(this.delimiter);
-                    let updatedText = text.substring(separateIndex);
-                    texts[line] = updatedText;
+    async getCondition(): Promise<void> {
+        // 匹配操作
+        this.operate = await window.showQuickPick<{ value: number } & QuickPickItem>(
+            [
+                {
+                    label: OPERATE[0],
+                    value: OPERATE['Left  ->  All']
+                }, {
+                    label: OPERATE[1],
+                    value: OPERATE['Right ->  All']
+                }, {
+                    label: OPERATE[2],
+                    value: OPERATE['All   ->  All']
                 }
-                line++;
-                break;
-            }
-            case OPERATE['Left  ->  Right']:
-            case OPERATE['Right ->  Right']:
-            case OPERATE['All   ->  Right']: {
-                // 获取到更新的行数据
-                const text = texts[line];
-                const separateIndex = text.indexOf(this.delimiter);
-                let updatedText = text.substring(0, separateIndex + 1);
-                texts[line] = updatedText;
-                line++;
-                break;
-            }
-            case OPERATE['Left  ->  All']:
-            case OPERATE['Right ->  All']:
-            case OPERATE['All   ->  All']: {
-                texts.splice(line, 1)
-                break;
-            }
+            ], { placeHolder: '选择对比区域 -> 更新区域（行为单位）' });
+
+        if (this.operate?.value !== OPERATE['All   ->  All']) {
+            // 匹配模式， 分割符， 以分隔符为中线， 条件 左/右/全部 ;  更新 左/右/全部
+            this.delimiter = await window.showInputBox({ placeHolder: '分隔符' }) || '';
         }
-        return { texts, line };
     }
 
     // 生成fields
-    generalFields(texts: string[]): Field[] {
-        /**
-         * todo 1.先单个，之后在批量
-         */
-        let text = texts[0];
-        const rows = text.split('\n');
+    generalFields(rows: string[]): Field[] {
         let Fields: Field[] = []
         // all -> all不用对数组进行分割
-        switch (this.operate?.value) {
-            case OPERATE['All   ->  All']: {
-                Fields = rows.map((item) => {
-                    return new Field('', '', item)
-                })
-                break;
-            }
-            default: {
-                // 切割行 /n
-                Fields = rows.map((item) => {
-                    let mid = item.indexOf(this.delimiter);
-                    let left = item.substring(0, mid);
-                    let right = item.substring(mid + 1, item.length);
-                    return new Field(left, right, item)
-                })
-                break;
-            }
+        if (this.operate?.value === OPERATE['All   ->  All']) {
+            Fields = rows.map((item) => ({ left: '', right: '', all: item }))
+        } else {
+            Fields = rows.map((item) => {
+                let mid = item.indexOf(this.delimiter);
+                let left = item.substring(0, mid);
+                let right = item.substring(mid + 1, item.length);
+                return { left, right, all: item }
+            })
         }
         return Fields
     }
@@ -345,26 +216,20 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
     assembleCompareData(Fields: Field[]): string {
         let result = '';
         switch (this.operate?.value) {
-            case OPERATE['All   ->  Left']:
-            case OPERATE['All   ->  Right']:
             case OPERATE['All   ->  All']: {
                 result = Fields.map(item => item.all).join('\n')
                 break;
             }
-            case OPERATE['Right ->  Left']:
-            case OPERATE['Right ->  Right']:
             case OPERATE['Right ->  All']: {
                 result = Fields.map(item => item.right).join('\n')
                 break;
             }
-            case OPERATE['Left  ->  Left']:
-            case OPERATE['Left  ->  Right']:
             case OPERATE['Left  ->  All']: {
                 result = Fields.map(item => item.left).join('\n')
                 break;
             }
         }
-        return result;
+        return result + '\n';
     }
 
     // *********************
@@ -404,19 +269,6 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
         const endPosition = textDocument.offsetAt(textEndPosition);
         // 选择的位置大于当前行默认位置，即已经到了文本末尾
         return selectEndPosition >= endPosition ? true : false;
-    }
-
-
-
-
-    // todo 匹配文本 (动态规划的方式  Histogram algorithm)
-    // https://link.springer.com/article/10.1007/s10664-019-09772-z
-    compareTextDocument(): void {
-
-
-        // console.log(diffLines(text2, text1));
-
-
     }
 }
 
