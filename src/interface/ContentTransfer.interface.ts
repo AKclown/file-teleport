@@ -1,4 +1,3 @@
-import { type } from "node:os";
 import { Range, TextEditor } from "vscode";
 
 // *********************

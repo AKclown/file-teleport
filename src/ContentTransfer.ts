@@ -69,6 +69,9 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
                 } else {
                     // 替换掉选中的文本
                     asyncForEach<Range, Promise<void>>(targetRanges, async (range: Range, index: number) => {
+                        console.log(range, 'range---');
+                        console.log(texts[index], 'texts--');
+
                         await editor.edit(editorContext => editorContext.replace(range, texts[index]))
                     })
                 }
@@ -81,7 +84,6 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
     // 执行更新操作  (todo: 两者行数不一致，多选择区域)
     async executeUpdate(...args: unknown[]): Promise<void> {
         try {
-
             /**
              * 1. 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
              */
@@ -101,10 +103,12 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
 
             // 将内容插入另外编辑器相同内容
             for (const editor of otherEditor) {
+
                 // 目标窗口的ranges     (这个可能没有选中)
                 const { ranges: targetRanges, texts: targetTexts } = this.getRelatedData(editor);
 
                 let targetText = targetTexts[0].split('\n');
+                let originTexts = texts[0].split('\n');
 
                 // 对比的行数记录
                 let originLine = 0;
@@ -114,6 +118,7 @@ export class ContentTransfer extends BaseClass implements IContentTransfer {
                 // 生成files
                 let targetFiles = this.generalFields(targetText);
                 // 组装数据
+                let originCompareText = this.assembleCompareData(originFiles)
                 let targetCompareText = this.assembleCompareData(targetFiles);
                 // 对比不同
                 let diffText = diffLines(targetCompareText, originCompareText);
