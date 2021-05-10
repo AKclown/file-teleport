@@ -1,10 +1,13 @@
-import { TextEditor } from 'vscode';
+import { TextEditor, Uri } from 'vscode';
 
 export interface IBaseClass {
-    originEditor: TextEditor | undefined;
-    targetEditor: Map<string, TextEditor>;
 
-    changeOriginEditor():void;
+}
 
-    changeTargetEditor():void;
+
+export type ReturnEditors = {
+    originEditor?: TextEditor;
+    targetEditors?: Array<TextEditor>;
+    // 解决无法多窗口先开修改问题
+    targetEditorUri?: Array<Uri>
 }

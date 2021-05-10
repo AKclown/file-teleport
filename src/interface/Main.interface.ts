@@ -4,7 +4,7 @@ import { Range, TextEditor } from "vscode";
 // class interface
 // *********************
 
-export interface IContentTransfer {
+export interface IMain {
 
     executeUpdate(...args: unknown[]): Promise<void>;
 
@@ -38,11 +38,13 @@ export type AddTextParams = {
     originLine: number;
     targetText: Array<string>;
     addLine: number;
+    count: number;
 }
 
 export type DeleteTextParams = {
     targetText: Array<string>;
     deleteLine: number;
+    count: number;
 }
 
 export type Field = {
@@ -50,6 +52,12 @@ export type Field = {
     right?: string;
     all?: string;
 }
+
+// todo
+export type ReturnSelectedInfo = {
+    ranges: Array<Range>;
+    texts: Array<string>;
+} 
 
 // *********************
 // operate enum 

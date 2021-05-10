@@ -1,48 +1,46 @@
-import { ExtensionContext, commands, window, TextEditorSelectionChangeEvent, Disposable } from 'vscode';
+import { ExtensionContext, commands, workspace, window } from 'vscode';
 import { COMMANDS } from './constant';
-import { ContentTransfer } from './ContentTransfer';
-import { FileRelated } from './OpenFile';
+import { Main } from './Main';
+import { Log } from './Log';
 
 export function activate(context: ExtensionContext) {
 	try {
+
 		// *********************
 		// Command Register
 		// *********************
-
-		const transferInstant = new ContentTransfer();
+		const mainInstant = new Main();
 		const defaultDisposable = commands.registerCommand(
 			COMMANDS.FILE_TELEPORT_UPDATE,
-			transferInstant.executeUpdate,
-			transferInstant
+			mainInstant.executeUpdate,
+			mainInstant
 		);
 
 		const insertDisposable = commands.registerCommand(
 			COMMANDS.FILE_TELEPORT_INSERT,
-			transferInstant.executeInsert,
-			transferInstant
+			mainInstant.executeInsert,
+			mainInstant
 		);
 
 		const replaceDisposable = commands.registerCommand(
 			COMMANDS.FILE_TELEPORT_REPLACE,
-			transferInstant.executeReplace,
-			transferInstant
+			mainInstant.executeReplace,
+			mainInstant
 		);
 
-		const fileInstant = new FileRelated();
 		const openFileDisposable = commands.registerCommand(
 			COMMANDS.OPEN_FILE,
-			fileInstant.executeOpenFile,
-			fileInstant
+			mainInstant.executeOpenFile,
+			mainInstant
 		);
 
+		// *********************
+		// listen
+		// *********************
 
-		// *********************
-		// Listener
-		// *********************
-		// 记录origin editor，提供给快捷键操作的时候
-		const selectDisposable = window.onDidChangeTextEditorSelection((evt: TextEditorSelectionChangeEvent) => {
-			// console.log(evt);
-		})
+		// // todo这个不需要
+		// const configDisposable = workspace.onDidChangeConfiguration(() =>mainInstant.getConfig());
+		// const visibleEditorDisposable = window.onDidChangeVisibleTextEditors(() => mainInstant.getEditors())
 
 		// *********************
 		// Destroy
@@ -53,10 +51,11 @@ export function activate(context: ExtensionContext) {
 			insertDisposable,
 			replaceDisposable,
 			openFileDisposable,
-			selectDisposable
+			// configDisposable,
+			// visibleEditorDisposable
 		);
 	} catch (error) {
-		console.log(error, 'error---');
+		Log.error(error);
 	}
 }
 

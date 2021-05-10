@@ -1,12 +1,101 @@
-import { TextEditor } from 'vscode';
-import { IBaseClass } from './interface/BaseClass.interface';
+import { workspace, window, ViewColumn, Uri, TextEditor } from 'vscode';
+import { asyncForEach } from './constant';
+import { IBaseClass, ReturnEditors } from './interface/BaseClass.interface';
+import { Log } from './Log';
+import { basename } from 'path';
 
+// 一些基础方法
 export class BaseClass implements IBaseClass {
-    originEditor: TextEditor | undefined = undefined;
-    // 频繁操作 map比object性能更加
-    targetEditor: Map<string, TextEditor> = new Map();
 
-    changeOriginEditor() { }
+    multipleFilePath: Array<string> = [];
 
-    changeTargetEditor() { }
+    constructor() {
+    }
+
+    // *********************
+    // Config
+    // *********************
+
+    // 获取到配置信息
+    getConfig(): Array<string> {
+        return workspace.getConfiguration().get('fileTeleport.multipleFilePath') || [];
+    }
+
+    // *********************
+    // Editor
+    // *********************
+
+    // 获取到相关编辑器
+    async getEditors(): Promise<ReturnEditors> {
+
+        /**
+         * 1. 最左边为origin  其余的都为target
+         * 2. 如果可见窗口只有单个，那么匹配multipleFilePath, 如果没有提示去设置,有就打开它们。不以侧边栏的形式
+         */
+        try {
+            const visibleEditor = window.visibleTextEditors;
+
+            if (visibleEditor.length === 0) return {};
+            let [originEditor, ...rest] = visibleEditor;
+
+            if (rest.length > 0) {
+                return { originEditor, targetEditors: rest };
+            } else {
+                const multipleFilePath = this.getConfig();
+                let targetEditorUri: Array<Uri> = [];
+                if (multipleFilePath.length === 0) {
+                    Log.info('去设置页面配置多文件路径配置')
+                } else {
+                    const name = workspace.name ?? '';
+                    const originPath = originEditor.document.uri.path;
+                    const rootPath = `${originPath.split(name)[0]}${name}`;
+                    await asyncForEach<string, Promise<void>>(multipleFilePath, async (item, index) => {
+                        const path = rootPath + (item.startsWith('/') ? item : `/${item}`);
+                        // 排除掉自身
+                        if (originPath !== path) {
+                            const uri = originEditor.document.uri.with({ path });
+                            targetEditorUri.push(uri);
+                        }
+                    })
+                }
+                return { originEditor, targetEditors: [], targetEditorUri };
+            }
+        } catch (error) {
+            console.log(error, '获取到相关编辑器');
+            return {}
+        }
+
+    }
+
+    async openFile(uri: Uri): Promise<TextEditor | undefined> {
+        try {
+            const document = await workspace.openTextDocument(uri);
+            return await window.showTextDocument(document, { preview: false });
+        } catch (error) {
+            console.log(error, 'openFile');
+            // 文件名不存在导致的异常
+            if (error.message.search(/cannot open/gm)) {
+                Log.warning(`操作${basename(uri.path)}文件失败,请查看该文件是否正常`)
+            } else {
+                Log.error(error);
+            }
+        }
+    }
+
+    // 打开文件
+    async executeOpenFile(...args: any[]): Promise<void> {
+        /**
+         * 1.如果只选择一个文件，提示需要选择两个文件
+         * 2.自定义编辑模块，左边origin 右边target
+         */
+        try {
+            const [originFileUri, targetFilesUri] = args[1];
+            const originDoc = await workspace.openTextDocument(originFileUri);
+            const targetDoc = await workspace.openTextDocument(targetFilesUri);
+            await window.showTextDocument(originDoc);
+            await window.showTextDocument(targetDoc, ViewColumn.Beside);
+        } catch (error) {
+            Log.error(error);
+        }
+    }
 }

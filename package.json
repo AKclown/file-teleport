@@ -56,13 +56,13 @@
 			{
 				"title": "FileTeleport",
 				"properties": {
-					"Multiple files": {
+					"fileTeleport.multipleFilePath": {
 						"type": "array",
 						"items": {
 							"type": "string"
 						},
 						"default": [],
-						"description": "配置多个文件路径(当前选中文件目录下的同级子文件,不存在则创建)",
+						"description": "Configure multiple file paths",
 						"scope": "window"
 					}
 				}
