@@ -44,7 +44,7 @@ export class BaseClass implements IBaseClass {
                 const multipleFilePath = this.getConfig();
                 let targetEditorUri: Array<Uri> = [];
                 if (multipleFilePath.length === 0) {
-                    Log.info('去设置页面配置多文件路径配置')
+                    // Log.info('去设置页面配置多文件路径配置')
                 } else {
                     const name = workspace.name ?? '';
                     const originPath = originEditor.document.uri.path;
@@ -75,7 +75,7 @@ export class BaseClass implements IBaseClass {
             console.log(error, 'openFile');
             // 文件名不存在导致的异常
             if (error.message.search(/cannot open/gm)) {
-                Log.warning(`操作${basename(uri.path)}文件失败,请查看该文件是否正常`)
+                // Log.warning(`操作${basename(uri.path)}文件失败,请查看该文件是否正常`)
             } else {
                 Log.error(error);
             }
