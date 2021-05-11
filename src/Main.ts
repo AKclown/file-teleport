@@ -93,7 +93,7 @@ export class Main extends BaseClass implements IMain {
     }
 
     // todo 执行替换操作 
-    executeReplace(...args: unknown[]): void {
+    async executeReplace(): Promise<void> {
         try {
             /**
              * 1. 判断选中的是否已经到行末尾了，整行替换
@@ -101,42 +101,100 @@ export class Main extends BaseClass implements IMain {
              * 3. 允许选择多个key或者value，或者其他替换
              */
 
-            const { activeEditor, otherEditor } = this.getRelatedEditor();
-            const { ranges, texts } = this.getRelatedData(activeEditor);
-            // 将内容插入另外编辑器相同内容
-            for (const editor of otherEditor) {
-                // 目标窗口的ranges     (这个可能没有选中)
-                const { ranges: targetRanges } = this.getRelatedData(editor);
+            const { originEditor, targetEditors, targetEditorUri } = await this.getEditors();
+            if (!originEditor || ((!targetEditors || targetEditors.length == 0) && (!targetEditorUri || targetEditorUri.length === 0))) return;
 
-                if (targetRanges.length === 0) {
-                    // 这里必须await，不然只会保留第一次
-                    asyncForEach<Range, Promise<void>>(ranges, async (range: Range, index: number) => {
-                        // 需要判断range是否已经是末尾了,是需要将替换的整行都替换，而不是部分
-                        let isTextEnd = this.isTextEnd(activeEditor, range);
-                        let replaceRange = range;
-                        if (isTextEnd) {
-                            const endPosition = new Position(range.end.line, editor.document.lineAt(range.end.line).text.length);
-                            replaceRange = replaceRange.with(replaceRange.start, endPosition)
+            const { ranges, texts } = this.getSelectedInfo(originEditor);
+            if (!ranges || !texts) return;
+
+            if (targetEditors && targetEditors.length > 0) {
+                // 具有多窗口
+                await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor) => {
+                    const { ranges: targetRanges, texts: targetTexts } = this.getSelectedInfo(editor);
+                    await asyncForEach<string, Promise<void>>(texts, async (item, index) => {
+                        console.log('asda');
+                        console.log(targetTexts);
+                        if (!targetTexts || !targetTexts[index]) {
+                            // 不存在对应的选择区域
+                            await this.getAreaValue();
+
+                        } else {
+
                         }
-                        await editor.edit(editorContext => editorContext.replace(replaceRange, texts[index]))
                     })
-                } else {
-                    // 替换掉选中的文本
-                    asyncForEach<Range, Promise<void>>(targetRanges, async (range: Range, index: number) => {
-                        await editor.edit(editorContext => editorContext.replace(range, texts[index]))
-                    })
-                }
+                })
+
+            } else if (targetEditorUri) {
+                // 没打开,使用这个
+
+
             }
+
+
+            // const { activeEditor, otherEditor } = this.getRelatedEditor();
+            // const { ranges, texts } = this.getRelatedData(activeEditor);
+            // // 将内容插入另外编辑器相同内容
+            // for (const editor of otherEditor) {
+            //     // 目标窗口的ranges     (这个可能没有选中)
+            //     const { ranges: targetRanges } = this.getRelatedData(editor);
+
+            //     if (targetRanges.length === 0) {
+            //         // 这里必须await，不然只会保留第一次
+            //         asyncForEach<Range, Promise<void>>(ranges, async (range: Range, index: number) => {
+            //             // 需要判断range是否已经是末尾了,是需要将替换的整行都替换，而不是部分
+            //             let isTextEnd = this.isTextEnd(activeEditor, range);
+            //             let replaceRange = range;
+            //             if (isTextEnd) {
+            //                 const endPosition = new Position(range.end.line, editor.document.lineAt(range.end.line).text.length);
+            //                 replaceRange = replaceRange.with(replaceRange.start, endPosition)
+            //             }
+            //             await editor.edit(editorContext => editorContext.replace(replaceRange, texts[index]))
+            //         })
+            //     } else {
+            //         // 替换掉选中的文本
+            //         asyncForEach<Range, Promise<void>>(targetRanges, async (range: Range, index: number) => {
+            //             await editor.edit(editorContext => editorContext.replace(range, texts[index]))
+            //         })
+            //     }
+            // }
         } catch (error) {
-            Log.error(error);
+            console.log(error);
+
+            // Log.error(error);
         }
     }
 
+    replaceText() {
+
+    }
+
+    async getAreaValue(): Promise<{ start: number, end: number }> {
+        const result = await window.showInputBox({ placeHolder: '起始行/结束行 (选择匹配区域)' });
+        if (result === undefined) {
+            throw new Error('主动取消')
+        } else {
+            const splits = result.split('/');
+            if (typeof +splits[0] !== 'number' || typeof +splits[1] !== 'number'
+                || +splits[0] < 1 || +splits[1] < 1
+            ) {
+                Log.warning('匹配区域数值不合法');
+                return this.getAreaValue()
+            } else {
+                const start = Math.round(Math.min(+splits[0], +splits[1])) || 1;
+                const end = Math.round(Math.max(+splits[0], +splits[1])) || 1;
+                return { start, end }
+            }
+        }
+    }
+
+
+
     // 执行更新操作  (todo: 两者行数不一致，多选择区域)
-    async executeUpdate(...args: unknown[]): Promise<void> {
+    async executeUpdate(): Promise<void> {
         try {
             /**
              * 1. 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
+             * !!! 2. 如果没有选择怎么办？ 只有一行删除或者添加 。 有选择选择倒是还ok. 这个一定要解决的。 如果选择输入行，多选择怎么办
              */
 
             await this.getCondition();
@@ -152,8 +210,8 @@ export class Main extends BaseClass implements IMain {
             const { activeEditor, otherEditor } = this.getRelatedEditor();
             if (!activeEditor) return;
             // const { ranges, texts } = this.getRelatedData(activeEditor);
+            // if (!texts) return;
 
-            if (!texts) return;
             // todo 生成files
             let originText = texts[0].split('\n');
             let originFiles = this.generalFields(originText);

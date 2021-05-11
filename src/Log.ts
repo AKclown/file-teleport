@@ -5,6 +5,8 @@ import { ILog } from "./interface/Log.interface";
 export class Log implements ILog {
     static readonly _github: string = 'https://github.com/AKclown/file-teleport/issues';
 
+    
+    
     static async error(data: unknown) {
         const result = await window.showErrorMessage(JSON.stringify(data), 'OpenIssue');
         if (result === 'Issue')
