@@ -112,8 +112,6 @@ export class Main extends BaseClass implements IMain {
                 await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor) => {
                     const { ranges: targetRanges, texts: targetTexts } = this.getSelectedInfo(editor);
                     await asyncForEach<string, Promise<void>>(texts, async (item, index) => {
-                        console.log('asda');
-                        console.log(targetTexts);
                         if (!targetTexts || !targetTexts[index]) {
                             // 不存在对应的选择区域
                             await this.getAreaValue();
@@ -171,13 +169,13 @@ export class Main extends BaseClass implements IMain {
     async getAreaValue(): Promise<{ start: number, end: number }> {
         const result = await window.showInputBox({ placeHolder: '起始行/结束行 (选择匹配区域)' });
         if (result === undefined) {
-            throw new Error('主动取消')
+            throw new Error()
         } else {
             const splits = result.split('/');
             if (typeof +splits[0] !== 'number' || typeof +splits[1] !== 'number'
                 || +splits[0] < 1 || +splits[1] < 1
             ) {
-                Log.warning('匹配区域数值不合法');
+                Log.warning({ label: 'IllegalArea', data: '区域数据不合法,请重新输入' });
                 return this.getAreaValue()
             } else {
                 const start = Math.round(Math.min(+splits[0], +splits[1])) || 1;
