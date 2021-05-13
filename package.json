@@ -2,7 +2,7 @@
 	"name": "file-teleport",
 	"displayName": "File Teleport",
 	"description": "The contents of one file are transferred to other files",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"publisher": "AKclown",
 	"engines": {
 		"vscode": "^1.46.0"
@@ -10,18 +10,21 @@
 	"categories": [
 		"Other"
 	],
+	"keywords": [
+		"file teleport",
+		"file content",
+		"transfer",
+		"Multi-file operation"
+	],
+	"homepage": "https://github.com/AKclown/file-teleport/blob/main/README.md",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/AKclown/file-teleport.git"
 	},
+	"icon": "images/icon.png",
 	"bugs": {
 		"url": "https://github.com/AKclown/file-teleport/issues"
 	},
-	"keywords": [
-		"file teleport",
-		"file content",
-		"transfer"
-	],
 	"activationEvents": [
 		"onCommand:file.teleport.openFile",
 		"onCommand:file.teleport.update",

@@ -1,3 +1,4 @@
+import { type } from "node:os";
 import { Range, TextEditor } from "vscode";
 
 // *********************
@@ -5,29 +6,30 @@ import { Range, TextEditor } from "vscode";
 // *********************
 
 export interface IMain {
+    executeInsert(...args: unknown[]): void;
+
+    insertText(editor: TextEditor, text: string, line?: number): Promise<void>;
+
+    executeReplace(...args: unknown[]): void;
+
+    replaceText(editor: TextEditor, startLine: number, endLine: number, text: string): Promise<void>;
 
     executeUpdate(...args: unknown[]): Promise<void>;
 
-    executeInsert(...args: unknown[]): void;
+    getSelectedInfo(editor: TextEditor): Partial<ReturnSelectedInfo>;
 
-    executeReplace(...args: unknown[]): void;
+    getAreaValue(): Promise<{ start: number, end: number }>;
+
+
+
+
+
 
 }
 
 // *********************
 // type 
 // *********************
-
-export type ReturnRelatedEditor = {
-    activeEditor: TextEditor;
-    otherEditor: Array<TextEditor>;
-}
-
-export type ReturnRelatedData = {
-    ranges: Array<Range>;
-    texts: Array<string>;
-}
-
 export type AddTextParams = {
     originText: Array<string>;
     originLine: number;
@@ -42,34 +44,27 @@ export type DeleteTextParams = {
     count: number;
 }
 
+export type UpdateTextParams = {
+    originText: string[];
+    targetText: string[];
+    editor: TextEditor;
+    range: Range;
+}
+
 export type Field = {
     left?: string;
     right?: string;
     all?: string;
 }
 
-// todo
 export type ReturnSelectedInfo = {
     ranges: Array<Range>;
     texts: Array<string>;
-} 
+}
 
 // *********************
 // operate enum 
 // *********************
-
-// 更新:功能砍掉。 这个目前能力还有限
-// export enum OPERATE {
-//     'Left  ->  Left' = 0,
-//     'Left  ->  Right' = 1,
-//     'Left  ->  All' = 2,
-//     'Right ->  Left' = 3,
-//     'Right ->  Right' = 4,
-//     'Right ->  All' = 5,
-//     'All   ->  Left' = 6,
-//     'All   ->  Right' = 7,
-//     'All   ->  All' = 8,
-// }
 
 export enum OPERATE {
     'Left  ->  All' = 0,

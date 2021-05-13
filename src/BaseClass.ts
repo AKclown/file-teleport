@@ -1,4 +1,4 @@
-import { workspace, window, ViewColumn, Uri, TextEditor } from 'vscode';
+import { workspace, window, ViewColumn, Uri, TextEditor, TextDocumentShowOptions } from 'vscode';
 import { asyncForEach } from './constant';
 import { IBaseClass, ReturnEditors } from './interface/BaseClass.interface';
 import { Log } from './Log';
@@ -6,11 +6,6 @@ import { basename } from 'path';
 
 // 一些基础方法
 export class BaseClass implements IBaseClass {
-
-    multipleFilePath: Array<string> = [];
-
-    constructor() {
-    }
 
     // *********************
     // Config
@@ -64,13 +59,13 @@ export class BaseClass implements IBaseClass {
             console.log(error, '获取到相关编辑器');
             return {}
         }
-
     }
 
-    async openFile(uri: Uri): Promise<TextEditor | undefined> {
+    // 打开文件
+    async openFile(uri: Uri, options?: TextDocumentShowOptions): Promise<TextEditor | undefined> {
         try {
             const document = await workspace.openTextDocument(uri);
-            return await window.showTextDocument(document, { preview: false });
+            return await window.showTextDocument(document, options ?? { preview: false });
         } catch (error) {
             console.log(error, 'openFile');
             // 文件名不存在导致的异常
@@ -82,20 +77,14 @@ export class BaseClass implements IBaseClass {
         }
     }
 
-    // 打开文件
+    //  执行命令打开
     async executeOpenFile(...args: any[]): Promise<void> {
         /**
-         * 1.如果只选择一个文件，提示需要选择两个文件
-         * 2.自定义编辑模块，左边origin 右边target
+         * 1.任意个 文件，
+         * 2.自定义编辑模块，左边origin 
          */
-        try {
-            const [originFileUri, targetFilesUri] = args[1];
-            const originDoc = await workspace.openTextDocument(originFileUri);
-            const targetDoc = await workspace.openTextDocument(targetFilesUri);
-            await window.showTextDocument(originDoc);
-            await window.showTextDocument(targetDoc, ViewColumn.Beside);
-        } catch (error) {
-            Log.error(error);
-        }
+        await asyncForEach<Uri, Promise<void>>(args[1], async (uri: Uri) => {
+            this.openFile(uri, {viewColumn: ViewColumn.Beside});
+        })
     }
 }
