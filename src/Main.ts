@@ -1,9 +1,10 @@
 import { window, Range, TextEditor, Position, QuickPickItem, Uri } from 'vscode';
-import { AddTextParams, DeleteTextParams, Field, IMain, OPERATE, ReturnSelectedInfo, UpdateTextParams } from './interface/Main.interface';
+import { AddTextParams, DeleteTextParams, Field, IMain, InsertTextParams, OPERATE, ReplaceTextParams, ReturnSelectedInfo, UpdateTextParams } from './interface/Main.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
 import { diffLines } from 'diff'
 import { Log } from './Log';
+import { ErrorEnum, OtherEnum, WarnEnum } from './interface/Log.interface';
 
 export class Main extends BaseClass implements IMain {
 
@@ -34,7 +35,7 @@ export class Main extends BaseClass implements IMain {
                 // 将内容插入另外编辑器相同内容
                 await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor) => {
                     await asyncForEach<string, Promise<void>>(texts, async (item) => {
-                        await this.insertText(editor, item)
+                        await this.insertText({ editor, text: item })
                     })
                 })
             } else if (targetEditorUri) {
@@ -42,34 +43,46 @@ export class Main extends BaseClass implements IMain {
                     const editor = await this.openFile(uri);
                     if (editor) {
                         await asyncForEach<string, Promise<void>>(texts, async (item) => {
-                            await this.insertText(editor, item)
+                            await this.insertText({ editor, text: item })
                         })
                     }
                 })
             }
         } catch (error) {
-            Log.error(error);
+            this.executeError(error);
         }
     }
 
     // 文本插入  line可选兼容replace调用
-    async insertText(editor: TextEditor, text: string, line?: number): Promise<void> {
-        let startLine = line ?? +(await window.showInputBox({ placeHolder: '插入起始行数' }) || '1');
-        startLine = startLine > 0 ? Math.round(startLine) : 1;
+    async insertText(params: InsertTextParams): Promise<void> {
+        try {
+            let { editor, text, line } = params;
+            let startLine = line ?? await window.showInputBox({ placeHolder: '插入起始行数' });
+            if (startLine === undefined) {
+                throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
+            } else if (startLine && typeof +startLine !== 'number') {
+                Log.warn({
+                    type: WarnEnum.ILLEGAL_INPUT_VALUE,
+                    data: '插入行数非法,请重新输入'
+                });
+            }
+            startLine = startLine > 0 ? Math.round(+startLine) : 1;
 
-        // 如果输入起始行大于最大行数,那么加空行
-        const lineCount = editor.document.lineCount;
-        const isOverflow = editor.document.lineCount < startLine ? true : false;
-        // 溢出，目标结尾， 不溢出输入起始行数
-        const position = new Position(isOverflow ? lineCount : startLine - 1, 0);
-
-        if (isOverflow) {
-            const overflowLine = startLine - lineCount;
-            text = Array.from({ length: overflowLine }).fill('\r\n').join('') + text;
-        } else {
-            text = text.endsWith('\r\n') ? text : `${text}\r\n`;
+            // 如果输入起始行大于最大行数,那么加空行
+            const lineCount = editor.document.lineCount;
+            const isOverflow = editor.document.lineCount < startLine ? true : false;
+            // 溢出，目标结尾， 不溢出输入起始行数
+            const position = new Position(isOverflow ? lineCount : startLine - 1, 0);
+            if (isOverflow) {
+                const overflowLine = startLine - lineCount;
+                text = Array.from({ length: overflowLine }).fill('\r\n').join('') + text;
+            } else {
+                text = text.endsWith('\r\n') ? text : `${text}\r\n`;
+            }
+            await editor.edit((editorContext) => editorContext.insert(position, text));
+        } catch (error) {
+            this.executeError(error);
         }
-        await editor.edit((editorContext) => editorContext.insert(position, text))
     }
 
     // 执行替换操作 
@@ -100,13 +113,13 @@ export class Main extends BaseClass implements IMain {
                             const maxLine = editor.document.lineCount;
                             if (start > maxLine) {
                                 // 大于，转为插入模式
-                                await this.insertText(editor, item, maxLine + 1);
+                                await this.insertText({ editor, text: item, line: maxLine + 1 });
                             } else if (end > maxLine) {
                                 // 大于， start -> maxLine 匹配整个文件
-                                await this.replaceText(editor, start, maxLine, item);
+                                await this.replaceText({ editor, startLine: start, endLine: maxLine, text: item });
                             } else {
                                 // 范围内
-                                await this.replaceText(editor, start, end, item);
+                                await this.replaceText({ editor, startLine: start, endLine: end, text: item });
                             }
                         } else if (targetRanges && targetRanges[index]) {
                             // 存在对应的选择区域
@@ -127,37 +140,38 @@ export class Main extends BaseClass implements IMain {
                             const maxLine = editor.document.lineCount;
                             if (start > maxLine) {
                                 // 大于，转为插入模式
-                                await this.insertText(editor, item, maxLine + 1);
+                                await this.insertText({ editor, text: item, line: maxLine + 1 });
                             } else if (end > maxLine) {
                                 // 大于， start -> maxLine 匹配整个文件
-                                await this.replaceText(editor, start, maxLine, item);
+                                await this.replaceText({ editor, startLine: start, endLine: maxLine, text: item });
                             } else {
                                 // 范围内
-                                await this.replaceText(editor, start, end, item);
+                                await this.replaceText({ editor, startLine: start, endLine: end, text: item });
                             }
                         })
                     }
                 })
             }
         } catch (error) {
-            console.log(error);
-            // Log.error(error);
+            this.executeError(error);
         }
     }
 
-    async replaceText(editor: TextEditor, startLine: number, endLine: number, text: string): Promise<void> {
-        const document = editor.document;
-        const replaceRange = new Range(document.lineAt(startLine - 1).range.start, document.lineAt(endLine - 1).range.end);
-        await editor.edit(editorContext => editorContext.replace(replaceRange, text))
+    async replaceText(params: ReplaceTextParams): Promise<void> {
+        try {
+            const { editor, startLine, endLine, text } = params;
+            const document = editor.document;
+            const replaceRange = new Range(document.lineAt(startLine - 1).range.start, document.lineAt(endLine - 1).range.end);
+            await editor.edit(editorContext => editorContext.replace(replaceRange, text));
+        } catch (error) {
+            this.executeError(error);
+        }
     }
 
     // 执行更新操作  
     async executeUpdate(): Promise<void> {
         try {
-            /**
-             * 1. 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
-             */
-
+            // 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
             await this.getCondition();
 
             // 进行数据组装
@@ -180,7 +194,7 @@ export class Main extends BaseClass implements IMain {
                             const maxLine = editor.document.lineCount;
                             if (start > maxLine) {
                                 // 大于，转为插入模式
-                                await this.insertText(editor, item, maxLine + 1);
+                                await this.insertText({ editor, text: item, line: maxLine + 1 });
                             } else if (end > maxLine) {
                                 // 大于， start -> maxLine 对比整个文件
                                 const range = new Range(new Position(start - 1, 0), editor.document.lineAt(maxLine - 1).range.end);
@@ -215,7 +229,7 @@ export class Main extends BaseClass implements IMain {
                             const maxLine = editor.document.lineCount;
                             if (start > maxLine) {
                                 // 大于，转为插入模式
-                                await this.insertText(editor, item, maxLine + 1);
+                                await this.insertText({ editor, text: item, line: maxLine + 1 });
                             } else if (end > maxLine) {
                                 // 大于， start -> maxLine 对比整个文件
                                 const range = new Range(new Position(start - 1, 0), editor.document.lineAt(maxLine - 1).range.end);
@@ -236,7 +250,7 @@ export class Main extends BaseClass implements IMain {
                 })
             }
         } catch (error) {
-            Log.error(error);
+            this.executeError(error);
         }
     }
 
@@ -254,13 +268,13 @@ export class Main extends BaseClass implements IMain {
             noEmptySelect.sort((pre, next) => pre.start.line - next.start.line);
 
             noEmptySelect.forEach(item => {
-                const range = new Range(item.start, item.end)
+                const range = new Range(item.start, item.end);
                 ranges.push(range);
-                texts.push(editor.document.getText(range))
+                texts.push(editor.document.getText(range));
             })
-            return { ranges, texts }
+            return { ranges, texts };
         } catch (error) {
-            Log.error(error);
+            this.executeError(error);
             return {};
         }
     }
@@ -268,71 +282,76 @@ export class Main extends BaseClass implements IMain {
     async getAreaValue(): Promise<{ start: number, end: number }> {
         const result = await window.showInputBox({ placeHolder: '起始行/结束行 (选择匹配区域)' });
         if (result === undefined) {
-            // todo ----- 
-            throw new Error('主动取消')
+            throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
         } else {
             const splits = result.split('/');
             if (typeof +splits[0] !== 'number' || typeof +splits[1] !== 'number'
                 || +splits[0] < 1 || +splits[1] < 1
             ) {
-                // Log.warning({ label: 'IllegalArea', data: '区域数据不合法,请重新输入' });
-                return this.getAreaValue()
+                Log.warn({
+                    type: WarnEnum.ILLEGAL_INPUT_VALUE,
+                    data: '区域数据不合法,请重新输入'
+                });
+                return this.getAreaValue();
             } else {
                 const start = Math.round(Math.min(+splits[0], +splits[1])) || 1;
                 const end = Math.round(Math.max(+splits[0], +splits[1])) || 1;
-                return { start, end }
+                return { start, end };
             }
         }
     }
 
     // 更新文本
     async updateText(params: UpdateTextParams): Promise<void> {
+        try {
+            let { originText, targetText, editor, range } = params;
 
-        let { originText, targetText, editor, range } = params;
+            // 对比的行数记录
+            let originLine = 0;
+            let addLine = 0;
+            let deleteLine = 0;
 
-        // 对比的行数记录
-        let originLine = 0;
-        let addLine = 0;
-        let deleteLine = 0;
+            // 生成files组装数据
+            let originFiles = this.generalFields(originText);
+            let originCompareText = this.assembleCompareData(originFiles);
+            let targetFiles = this.generalFields(targetText);
+            let targetCompareText = this.assembleCompareData(targetFiles);
 
-        // 生成files组装数据
-        let originFiles = this.generalFields(originText);
-        let originCompareText = this.assembleCompareData(originFiles);
-        let targetFiles = this.generalFields(targetText);
-        let targetCompareText = this.assembleCompareData(targetFiles);
+            // 对比不同
+            let diffText = diffLines(targetCompareText, originCompareText);
 
-        // 对比不同
-        let diffText = diffLines(targetCompareText, originCompareText);
-
-        // 造出数据来，一次性replace掉
-        diffText.forEach(item => {
-            // 判断数据是否更改了 (行数需要移动)
-            if (item.removed) {
-                const params = {
-                    targetText,
-                    deleteLine,
-                    count: item.count ?? 0
+            // 造出数据来，一次性replace掉
+            diffText.forEach(item => {
+                // 判断数据是否更改了 (行数需要移动)
+                if (item.removed) {
+                    const params = {
+                        targetText,
+                        deleteLine,
+                        count: item.count ?? 0
+                    }
+                    targetText = this.deleteText(params);
+                } else if (item.added) {
+                    const params = {
+                        originText,
+                        originLine,
+                        targetText,
+                        addLine,
+                        count: item.count ?? 0
+                    }
+                    targetText = this.addText(params);
+                    addLine += item.count ?? 0;
+                    deleteLine += item.count ?? 0;
+                    originLine += item.count ?? 0;
+                } else {
+                    addLine += item.count ?? 0;
+                    deleteLine += item.count ?? 0;
+                    originLine += item.count ?? 0;
                 }
-                targetText = this.deleteText(params);
-            } else if (item.added) {
-                const params = {
-                    originText,
-                    originLine,
-                    targetText,
-                    addLine,
-                    count: item.count ?? 0
-                }
-                targetText = this.addText(params);
-                addLine += item.count ?? 0;
-                deleteLine += item.count ?? 0;
-                originLine += item.count ?? 0;
-            } else {
-                addLine += item.count ?? 0;
-                deleteLine += item.count ?? 0;
-                originLine += item.count ?? 0;
-            }
-        })
-        await editor.edit(editorContext => editorContext.replace(range, targetText.join('\n')))
+            })
+            await editor.edit(editorContext => editorContext.replace(range, targetText.join('\n')));
+        } catch (error) {
+            this.executeError(error);
+        }
     }
 
     // 添加
@@ -344,7 +363,7 @@ export class Main extends BaseClass implements IMain {
             targetText.splice(addLine, 0, ...addTexts);
             return targetText;
         } catch (error) {
-            Log.error(error);
+            this.executeError(error);
             return [];
         }
     }
@@ -356,34 +375,38 @@ export class Main extends BaseClass implements IMain {
             targetText.splice(deleteLine, count)
             return targetText;
         } catch (error) {
-            Log.error(error);
+            this.executeError(error);
             return [];
         }
     }
 
     async getCondition(): Promise<void> {
-        try {
-            // 匹配操作
-            this.operate = await window.showQuickPick<{ value: number } & QuickPickItem>(
-                [
-                    {
-                        label: OPERATE[0],
-                        value: OPERATE['Left  ->  All']
-                    }, {
-                        label: OPERATE[1],
-                        value: OPERATE['Right ->  All']
-                    }, {
-                        label: OPERATE[2],
-                        value: OPERATE['All   ->  All']
-                    }
-                ], { placeHolder: '选择对比区域 -> 更新区域（行为单位）' });
+        // 匹配操作
+        this.operate = await window.showQuickPick<{ value: number } & QuickPickItem>(
+            [
+                {
+                    label: OPERATE[0],
+                    value: OPERATE['Left  ->  All']
+                }, {
+                    label: OPERATE[1],
+                    value: OPERATE['Right ->  All']
+                }, {
+                    label: OPERATE[2],
+                    value: OPERATE['All   ->  All']
+                }
+            ], { placeHolder: '选择对比区域 -> 更新区域（行为单位）' });
 
-            if (this.operate?.value !== OPERATE['All   ->  All']) {
-                // 匹配模式， 分割符， 以分隔符为中线， 条件 左/右/全部 ;  更新 左/右/全部
-                this.delimiter = await window.showInputBox({ placeHolder: '分隔符' }) || '';
+        if (this.operate === undefined) {
+            throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
+        }
+
+        if (this.operate?.value !== OPERATE['All   ->  All']) {
+            // 匹配模式， 分割符， 以分隔符为中线， 条件 左/右/全部 ;  更新 左/右/全部
+            const result = await window.showInputBox({ placeHolder: '分隔符' });
+            if (result === undefined) {
+                throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
             }
-        } catch (error) {
-            Log.error(error);
+            this.delimiter = result;
         }
     }
 
@@ -404,7 +427,7 @@ export class Main extends BaseClass implements IMain {
             }
             return Fields;
         } catch (error) {
-            Log.error(error);
+            this.executeError(error);
             return [];
         }
     }
@@ -429,8 +452,19 @@ export class Main extends BaseClass implements IMain {
             }
             return result + '\n';
         } catch (error) {
-            Log.error(error);
+            this.executeError(error);
             return '';
+        }
+    }
+
+    // 处理错误
+    executeError(error: unknown) {
+        if ((error as Error).message !== OtherEnum.VOLUNTARILY_CANCEL) {
+            Log.error({
+                type: ErrorEnum.UNKNOWN_MISTAKE,
+                data: error,
+                items: ['OpenIssue']
+            });
         }
     }
 }

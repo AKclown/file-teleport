@@ -2,10 +2,10 @@ import { ExtensionContext, commands } from 'vscode';
 import { COMMANDS } from './constant';
 import { Main } from './Main';
 import { Log } from './Log';
+import { ErrorEnum } from './interface/Log.interface';
 
 export function activate(context: ExtensionContext) {
 	try {
-
 		// *********************
 		// Command Register
 		// *********************
@@ -45,7 +45,11 @@ export function activate(context: ExtensionContext) {
 			openFileDisposable,
 		);
 	} catch (error) {
-		Log.error(error);
+		Log.error({
+			type: ErrorEnum.UNKNOWN_MISTAKE,
+			data: error,
+			items: ['OpenIssue']
+		});
 	}
 }
 

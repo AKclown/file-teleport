@@ -8,11 +8,11 @@ import { Range, TextEditor } from "vscode";
 export interface IMain {
     executeInsert(...args: unknown[]): void;
 
-    insertText(editor: TextEditor, text: string, line?: number): Promise<void>;
+    insertText(params:InsertTextParams): Promise<void>;
 
     executeReplace(...args: unknown[]): void;
 
-    replaceText(editor: TextEditor, startLine: number, endLine: number, text: string): Promise<void>;
+    replaceText(params: ReplaceTextParams): Promise<void>;
 
     executeUpdate(...args: unknown[]): Promise<void>;
 
@@ -43,6 +43,19 @@ export type UpdateTextParams = {
     targetText: string[];
     editor: TextEditor;
     range: Range;
+}
+
+export type ReplaceTextParams = {
+    editor: TextEditor;
+    startLine: number;
+    endLine: number;
+    text: string;
+}
+
+export type InsertTextParams = {
+    editor: TextEditor;
+    text: string;
+    line?: number;
 }
 
 export type Field = {

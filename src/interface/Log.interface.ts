@@ -1,7 +1,5 @@
 export interface ILog {
-
 }
-
 
 export type ErrorType = {
     type: ErrorEnum;
@@ -21,8 +19,8 @@ export type WarnType = {
 
 // 警告类型定义
 export enum WarnEnum {
-    CANCEL_AREA = 'CANCEL_AREA',
-    ILLEGAL_AREA = 'ILLEGAL_AREA',
+    ILLEGAL_INPUT_VALUE = 'ILLEGAL_INPUT_VALUE',
+    FILE_OPENING_EXCEPTION = 'FILE_OPENING_EXCEPTION'
 }
 
 export type InfoType = {
@@ -30,7 +28,13 @@ export type InfoType = {
     data: unknown;
     items?: Array<string>;
 }
+
 // 错误类型定义
 export enum InfoEnum {
-    TO_SETTING = 'TO_SETTING'
+    TO_SETTING = 'TO_SETTING',
+}
+
+export enum OtherEnum {
+    // 主动取消输入
+    VOLUNTARILY_CANCEL = 'VOLUNTARILY_CANCEL'
 }
