@@ -84,7 +84,7 @@ export class BaseClass implements IBaseClass {
          * 2.自定义编辑模块，左边origin 
          */
         await asyncForEach<Uri, Promise<void>>(args[1], async (uri: Uri) => {
-            this.openFile(uri, {viewColumn: ViewColumn.Beside});
+            await  this.openFile(uri, {viewColumn: ViewColumn.Beside});
         })
     }
 }
