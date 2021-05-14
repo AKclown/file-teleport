@@ -4,23 +4,33 @@ export interface ILog {
 
 
 export type ErrorType = {
-    label: ErrorLabelType;
+    type: ErrorEnum;
     data: unknown;
     items?: Array<string>;
 }
-export type ErrorLabelType = 'OpenIssue';
+// 错误类型定义
+export enum ErrorEnum {
+    UNKNOWN_MISTAKE = 'UNKNOWN_MISTAKE',
+}
 
 export type WarnType = {
-    label: WarnLabelType;
+    type: WarnEnum;
     data: unknown;
     items?: Array<string>;
 }
-export type WarnLabelType = 'CancelArea' | 'IllegalArea';
 
+// 警告类型定义
+export enum WarnEnum {
+    CANCEL_AREA = 'CANCEL_AREA',
+    ILLEGAL_AREA = 'ILLEGAL_AREA',
+}
 
 export type InfoType = {
-    label: InfoLabelType;
+    type: InfoEnum;
     data: unknown;
     items?: Array<string>;
 }
-export type InfoLabelType = 'ToSetting';
+// 错误类型定义
+export enum InfoEnum {
+    TO_SETTING = 'TO_SETTING'
+}

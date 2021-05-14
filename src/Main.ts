@@ -187,20 +187,20 @@ export class Main extends BaseClass implements IMain {
                                 let targetText = editor.document.getText(range);
                                 let originTexts = item.split('\n');
                                 let targetTexts = targetText.split('\n');
-                                await this.updateText(originTexts, targetTexts, editor, range);
+                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
                             } else {
                                 // 范围内
                                 const range = new Range(new Position(start - 1, 0), editor.document.lineAt(end - 1).range.end);
                                 let targetText = editor.document.getText(range);
                                 let originTexts = item.split('\n');
                                 let targetTexts = targetText.split('\n');
-                                await this.updateText(originTexts, targetTexts, editor, range);
+                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
                             }
                         } else if (targetRanges && targetRanges[index] && targetTexts) {
                             // 存在对应的选择区域
                             let originTexts = item.split('\n');
                             let targetText = targetTexts[index].split('\n');
-                            await this.updateText(originTexts, targetText, editor, targetRanges[index]);
+                            await this.updateText({ originText: originTexts, targetText, editor, range: targetRanges[index] });
                         }
                     })
                 })
@@ -222,14 +222,14 @@ export class Main extends BaseClass implements IMain {
                                 let targetText = editor.document.getText(range);
                                 let originTexts = item.split('\n');
                                 let targetTexts = targetText.split('\n');
-                                await this.updateText(originTexts, targetTexts, editor, range);
+                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
                             } else {
                                 // 范围内
                                 const range = new Range(new Position(start - 1, 0), editor.document.lineAt(end - 1).range.end);
                                 let targetText = editor.document.getText(range);
                                 let originTexts = item.split('\n');
                                 let targetTexts = targetText.split('\n');
-                                await this.updateText(originTexts, targetTexts, editor, range);
+                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
                             }
                         })
                     }
@@ -275,7 +275,7 @@ export class Main extends BaseClass implements IMain {
             if (typeof +splits[0] !== 'number' || typeof +splits[1] !== 'number'
                 || +splits[0] < 1 || +splits[1] < 1
             ) {
-                Log.warning({ label: 'IllegalArea', data: '区域数据不合法,请重新输入' });
+                // Log.warning({ label: 'IllegalArea', data: '区域数据不合法,请重新输入' });
                 return this.getAreaValue()
             } else {
                 const start = Math.round(Math.min(+splits[0], +splits[1])) || 1;

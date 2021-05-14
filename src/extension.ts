@@ -1,4 +1,4 @@
-import { ExtensionContext, commands, workspace, window } from 'vscode';
+import { ExtensionContext, commands } from 'vscode';
 import { COMMANDS } from './constant';
 import { Main } from './Main';
 import { Log } from './Log';
@@ -35,14 +35,6 @@ export function activate(context: ExtensionContext) {
 		);
 
 		// *********************
-		// listen
-		// *********************
-
-		// // todo这个不需要
-		// const configDisposable = workspace.onDidChangeConfiguration(() =>mainInstant.getConfig());
-		// const visibleEditorDisposable = window.onDidChangeVisibleTextEditors(() => mainInstant.getEditors())
-
-		// *********************
 		// Destroy
 		// *********************
 
@@ -51,8 +43,6 @@ export function activate(context: ExtensionContext) {
 			insertDisposable,
 			replaceDisposable,
 			openFileDisposable,
-			// configDisposable,
-			// visibleEditorDisposable
 		);
 	} catch (error) {
 		Log.error(error);

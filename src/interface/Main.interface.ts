@@ -19,12 +19,6 @@ export interface IMain {
     getSelectedInfo(editor: TextEditor): Partial<ReturnSelectedInfo>;
 
     getAreaValue(): Promise<{ start: number, end: number }>;
-
-
-
-
-
-
 }
 
 // *********************

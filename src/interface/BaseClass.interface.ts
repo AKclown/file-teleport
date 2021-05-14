@@ -1,7 +1,13 @@
-import { TextEditor, Uri } from 'vscode';
+import { TextDocumentShowOptions, TextEditor, Uri } from 'vscode';
 
 export interface IBaseClass {
+    getConfig(): Array<string>;
 
+    getEditors(): Promise<ReturnEditors>;
+
+    openFile(uri: Uri, options?: TextDocumentShowOptions): Promise<TextEditor | undefined>;
+
+    executeOpenFile(...args: any[]): Promise<void>;
 }
 
 
