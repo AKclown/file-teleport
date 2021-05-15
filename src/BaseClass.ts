@@ -75,7 +75,7 @@ export class BaseClass implements IBaseClass {
             if (error.message.search(/cannot open/gm)) {
                 Log.warn({
                     type: WarnEnum.FILE_OPENING_EXCEPTION,
-                    data: `操作${basename(uri.path)}文件失败,请查看该文件是否正常`
+                    data: `Operate file ${basename(uri.path)}  unsuccessfully, please check whether the file is normal`
                 });
             } else {
                 Log.error({

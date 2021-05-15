@@ -57,13 +57,13 @@ export class Main extends BaseClass implements IMain {
     async insertText(params: InsertTextParams): Promise<void> {
         try {
             let { editor, text, line } = params;
-            let startLine = line ?? await window.showInputBox({ placeHolder: '插入起始行数' });
+            let startLine = line ?? await window.showInputBox({ placeHolder: 'Insert the number of start line' });
             if (startLine === undefined) {
                 throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
             } else if (startLine && typeof +startLine !== 'number') {
                 Log.warn({
                     type: WarnEnum.ILLEGAL_INPUT_VALUE,
-                    data: '插入行数非法,请重新输入'
+                    data: 'Illegal number of inserted rows, please re-enter'
                 });
             }
             startLine = startLine > 0 ? Math.round(+startLine) : 1;
@@ -280,7 +280,7 @@ export class Main extends BaseClass implements IMain {
     }
 
     async getAreaValue(): Promise<{ start: number, end: number }> {
-        const result = await window.showInputBox({ placeHolder: '起始行/结束行 (选择匹配区域)' });
+        const result = await window.showInputBox({ placeHolder: 'Start line/End line (select matching area)' });
         if (result === undefined) {
             throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
         } else {
@@ -394,7 +394,7 @@ export class Main extends BaseClass implements IMain {
                     label: OPERATE[2],
                     value: OPERATE['All   ->  All']
                 }
-            ], { placeHolder: '选择对比区域 -> 更新区域（行为单位）' });
+            ], { placeHolder: 'Select the comparison area -> Update area (behavior unit)' });
 
         if (this.operate === undefined) {
             throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
@@ -402,7 +402,7 @@ export class Main extends BaseClass implements IMain {
 
         if (this.operate?.value !== OPERATE['All   ->  All']) {
             // 匹配模式， 分割符， 以分隔符为中线， 条件 左/右/全部 ;  更新 左/右/全部
-            const result = await window.showInputBox({ placeHolder: '分隔符' });
+            const result = await window.showInputBox({ placeHolder: 'Separator' });
             if (result === undefined) {
                 throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
             }

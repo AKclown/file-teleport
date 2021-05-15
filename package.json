@@ -65,7 +65,7 @@
 							"type": "string"
 						},
 						"default": [],
-						"description": "Configure multiple file paths",
+						"description": "Configure multiple file paths (Based on the root directory)",
 						"scope": "window"
 					}
 				}
