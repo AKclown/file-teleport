@@ -1,10 +1,10 @@
-import { window, Range, TextEditor, Position, QuickPickItem, Uri } from 'vscode';
+import { window, Range, TextEditor, Position, QuickPickItem, Uri, commands } from 'vscode';
 import { AddTextParams, DeleteTextParams, Field, IMain, InsertTextParams, OPERATE, ReplaceTextParams, ReturnSelectedInfo, UpdateTextParams } from './interface/Main.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
 import { diffLines } from 'diff'
-import { Log } from './Log';
-import { ErrorEnum, OtherEnum, WarnEnum } from './interface/Log.interface';
+import { Logger } from './Logger';
+import { ErrorEnum, OtherEnum, WarnEnum } from './interface/Logger.interface';
 
 export class Main extends BaseClass implements IMain {
 
@@ -19,6 +19,7 @@ export class Main extends BaseClass implements IMain {
 
     // 执行插入操作
     async executeInsert(): Promise<void> {
+       
         try {
             /**
              * 1. 输入插入的起始行数
@@ -61,7 +62,7 @@ export class Main extends BaseClass implements IMain {
             if (startLine === undefined) {
                 throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
             } else if (startLine && typeof +startLine !== 'number') {
-                Log.warn({
+                Logger.warn({
                     type: WarnEnum.ILLEGAL_INPUT_VALUE,
                     data: 'Illegal number of inserted rows, please re-enter'
                 });
@@ -288,7 +289,7 @@ export class Main extends BaseClass implements IMain {
             if (typeof +splits[0] !== 'number' || typeof +splits[1] !== 'number'
                 || +splits[0] < 1 || +splits[1] < 1
             ) {
-                Log.warn({
+                Logger.warn({
                     type: WarnEnum.ILLEGAL_INPUT_VALUE,
                     data: '区域数据不合法,请重新输入'
                 });
@@ -460,7 +461,7 @@ export class Main extends BaseClass implements IMain {
     // 处理错误
     executeError(error: unknown) {
         if ((error as Error).message !== OtherEnum.VOLUNTARILY_CANCEL) {
-            Log.error({
+            Logger.error({
                 type: ErrorEnum.UNKNOWN_MISTAKE,
                 data: error,
                 items: ['OpenIssue']

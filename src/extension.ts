@@ -1,8 +1,8 @@
 import { ExtensionContext, commands } from 'vscode';
 import { COMMANDS } from './constant';
 import { Main } from './Main';
-import { Log } from './Log';
-import { ErrorEnum } from './interface/Log.interface';
+import { Logger } from './Logger';
+import { ErrorEnum } from './interface/Logger.interface';
 
 export function activate(context: ExtensionContext) {
 	try {
@@ -45,7 +45,7 @@ export function activate(context: ExtensionContext) {
 			openFileDisposable,
 		);
 	} catch (error) {
-		Log.error({
+		Logger.error({
 			type: ErrorEnum.UNKNOWN_MISTAKE,
 			data: error,
 			items: ['OpenIssue']

@@ -1,6 +1,10 @@
 export interface ILog {
 }
 
+// *********************
+// type 
+// *********************
+
 export type ErrorType = {
     type: ErrorEnum;
     data: unknown;

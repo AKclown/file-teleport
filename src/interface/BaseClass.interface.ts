@@ -10,6 +10,9 @@ export interface IBaseClass {
     executeOpenFile(...args: any[]): Promise<void>;
 }
 
+// *********************
+// type 
+// *********************
 
 export type ReturnEditors = {
     originEditor?: TextEditor;

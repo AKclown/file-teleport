@@ -1,9 +1,9 @@
 import { workspace, window, ViewColumn, Uri, TextEditor, TextDocumentShowOptions } from 'vscode';
 import { asyncForEach } from './constant';
 import { IBaseClass, ReturnEditors } from './interface/BaseClass.interface';
-import { Log } from './Log';
+import { Logger } from './Logger';
 import { basename } from 'path';
-import { ErrorEnum, WarnEnum } from './interface/Log.interface';
+import { ErrorEnum, InfoEnum, WarnEnum } from './interface/Logger.interface';
 
 // 一些基础方法
 export class BaseClass implements IBaseClass {
@@ -39,7 +39,11 @@ export class BaseClass implements IBaseClass {
                 const multipleFilePath = this.getConfig();
                 let targetEditorUri: Array<Uri> = [];
                 if (multipleFilePath.length === 0) {
-                    // Log.info('去设置页面配置多文件路径配置')
+                    Logger.info({
+                        type:InfoEnum.TO_SETTING,
+                        data:'Go to the settings page to configure the multi-file path configuration',
+                        items:['ToSetting'],
+                    })
                 } else {
                     const name = workspace.name ?? '';
                     const originPath = originEditor.document.uri.path;
@@ -56,7 +60,7 @@ export class BaseClass implements IBaseClass {
                 return { originEditor, targetEditors: [], targetEditorUri };
             }
         } catch (error) {
-            Log.error({
+            Logger.error({
                 type: ErrorEnum.UNKNOWN_MISTAKE,
                 data: error,
                 items: ['OpenIssue']
@@ -73,12 +77,12 @@ export class BaseClass implements IBaseClass {
         } catch (error) {
             // 文件名不存在导致的异常
             if (error.message.search(/cannot open/gm)) {
-                Log.warn({
+                Logger.warn({
                     type: WarnEnum.FILE_OPENING_EXCEPTION,
                     data: `Operate file ${basename(uri.path)}  unsuccessfully, please check whether the file is normal`
                 });
             } else {
-                Log.error({
+                Logger.error({
                     type: ErrorEnum.UNKNOWN_MISTAKE,
                     data: error,
                     items: ['OpenIssue']
