@@ -14,7 +14,8 @@
 		"file teleport",
 		"file content",
 		"transfer",
-		"Multi-file operation"
+		"Multi-file operation",
+		"Content synchronization"
 	],
 	"homepage": "https://github.com/AKclown/file-teleport/blob/main/README.md",
 	"repository": {
