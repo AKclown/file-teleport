@@ -22,7 +22,7 @@
 		"type": "git",
 		"url": "https://github.com/AKclown/file-teleport.git"
 	},
-	"icon": "images/icon.png", 	
+	"icon": "images/icon.png",
 	"bugs": {
 		"url": "https://github.com/AKclown/file-teleport/issues"
 	},
@@ -58,9 +58,10 @@
 		],
 		"configuration": [
 			{
+				"type": "object",
 				"title": "FileTeleport",
 				"properties": {
-					"fileTeleport.multipleFilePath": {
+					"multipleFilePath": {
 						"type": "array",
 						"items": {
 							"type": "string"
@@ -68,6 +69,11 @@
 						"default": [],
 						"description": "Configure multiple file paths (Based on the root directory)",
 						"scope": "window"
+					},
+					"persistentInput": {
+						"type": "boolean",
+						"default": true,
+						"description": "Keep a record of the number of lines entered (Update area\\insert rows ...)"
 					}
 				}
 			}

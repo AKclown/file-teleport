@@ -1,10 +1,10 @@
-import { window, Range, TextEditor, Position, QuickPickItem, Uri, commands } from 'vscode';
+import { window, Range, TextEditor, Position, QuickPickItem, Uri } from 'vscode';
 import { AddTextParams, DeleteTextParams, Field, IMain, InsertTextParams, OPERATE, ReplaceTextParams, ReturnSelectedInfo, UpdateTextParams } from './interface/Main.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
-import { diffLines } from 'diff'
+import { diffLines } from 'diff';
 import { Logger } from './Logger';
-import { ErrorEnum, OtherEnum, WarnEnum } from './interface/Logger.interface';
+import { ErrorEnum, OtherEnum } from './interface/Logger.interface';
 
 export class Main extends BaseClass implements IMain {
 
@@ -13,13 +13,15 @@ export class Main extends BaseClass implements IMain {
     // 分割符
     delimiter: string = '';
 
+    // 持久化输入数组
+    persistentInputArray: Array<{ start?: number, end?: number }> = [];
+
     // *********************
-    // Execute function 
+    // Insert Function 
     // *********************
 
     // 执行插入操作
     async executeInsert(): Promise<void> {
-       
         try {
             /**
              * 1. 输入插入的起始行数
@@ -27,48 +29,54 @@ export class Main extends BaseClass implements IMain {
              * 3. 错误处理
              */
             const { originEditor, targetEditors, targetEditorUri } = await this.getEditors();
-            if (!originEditor || ((!targetEditors || targetEditors.length == 0) && (!targetEditorUri || targetEditorUri.length === 0))) return;
+            if (!originEditor || ((!targetEditors || targetEditors.length === 0) && (!targetEditorUri || targetEditorUri.length === 0))) { return; }
 
             const { ranges, texts } = this.getSelectedInfo(originEditor);
-            if (!ranges || !texts) return;
+            if (!ranges || !texts) { return; }
+
+            // 持久化开关
+            const persistentFlag = this.getConfig('persistentInput') as boolean;
+            this.persistentInputArray = [];
 
             if (targetEditors && targetEditors.length > 0) {
                 // 将内容插入另外编辑器相同内容
-                await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor) => {
-                    await asyncForEach<string, Promise<void>>(texts, async (item) => {
-                        await this.insertText({ editor, text: item })
-                    })
-                })
+                await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor, index) => {
+                    await this.traverseInsertTexts(editor, texts, persistentFlag, index);
+                });
             } else if (targetEditorUri) {
-                await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri) => {
+                await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri, index) => {
                     const editor = await this.openFile(uri);
                     if (editor) {
-                        await asyncForEach<string, Promise<void>>(texts, async (item) => {
-                            await this.insertText({ editor, text: item })
-                        })
+                        await this.traverseInsertTexts(editor, texts, persistentFlag, index);
                     }
-                })
+                });
             }
         } catch (error) {
             this.executeError(error);
         }
     }
 
+    // 遍历插入文本
+    async traverseInsertTexts(editor: TextEditor, texts: Array<string>, persistentFlag: boolean, index: number) {
+        await asyncForEach<string, Promise<void>>(texts, async (item, num) => {
+            // 数据持久化  (只在第一个窗口提示输入)
+            let startLine = 1;
+            if (index === 0 && persistentFlag) {
+                startLine = await this.getInsertLine();
+                this.persistentInputArray.push({ start: startLine });
+            } else if (!persistentFlag) {
+                startLine = await this.getInsertLine();
+            }
+            startLine = persistentFlag ? this.persistentInputArray[num].start! : startLine;
+            await this.insertText({ editor, text: item, line: startLine });
+        });
+    }
+
     // 文本插入  line可选兼容replace调用
     async insertText(params: InsertTextParams): Promise<void> {
         try {
             let { editor, text, line } = params;
-            let startLine = line ?? await window.showInputBox({ placeHolder: 'Insert the number of start line' });
-            if (startLine === undefined) {
-                throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
-            } else if (startLine && typeof +startLine !== 'number') {
-                Logger.warn({
-                    type: WarnEnum.ILLEGAL_INPUT_VALUE,
-                    data: 'Illegal number of inserted rows, please re-enter'
-                });
-            }
-            startLine = startLine > 0 ? Math.round(+startLine) : 1;
-
+            let startLine = await this.getInsertLine(line);
             // 如果输入起始行大于最大行数,那么加空行
             const lineCount = editor.document.lineCount;
             const isOverflow = editor.document.lineCount < startLine ? true : false;
@@ -86,6 +94,10 @@ export class Main extends BaseClass implements IMain {
         }
     }
 
+    // *********************
+    // Replace Function 
+    // *********************
+
     // 执行替换操作 
     async executeReplace(): Promise<void> {
         try {
@@ -96,68 +108,75 @@ export class Main extends BaseClass implements IMain {
              */
 
             const { originEditor, targetEditors, targetEditorUri } = await this.getEditors();
-            if (!originEditor || ((!targetEditors || targetEditors.length == 0)
-                && (!targetEditorUri || targetEditorUri.length === 0))) return;
+            if (!originEditor || ((!targetEditors || targetEditors.length === 0)
+                && (!targetEditorUri || targetEditorUri.length === 0))) { return; }
 
             const { ranges, texts } = this.getSelectedInfo(originEditor);
-            if (!ranges || !texts) return;
+            if (!ranges || !texts) { return; }
+
+            // 持久化开关
+            const persistentFlag = this.getConfig('persistentInput') as boolean;
+            this.persistentInputArray = [];
 
             if (targetEditors && targetEditors.length > 0) {
                 // 具有多窗口
-                await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor) => {
-                    const { ranges: targetRanges, texts: targetTexts } = this.getSelectedInfo(editor);
-                    await asyncForEach<string, Promise<void>>(texts, async (item, index) => {
-                        if (!targetTexts || !targetTexts[index]) {
-                            // 不存在对应的选择区域
-                            const { start, end } = await this.getAreaValue();
-                            // 判断是否大于文档最大行数，如果是
-                            const maxLine = editor.document.lineCount;
-                            if (start > maxLine) {
-                                // 大于，转为插入模式
-                                await this.insertText({ editor, text: item, line: maxLine + 1 });
-                            } else if (end > maxLine) {
-                                // 大于， start -> maxLine 匹配整个文件
-                                await this.replaceText({ editor, startLine: start, endLine: maxLine, text: item });
-                            } else {
-                                // 范围内
-                                await this.replaceText({ editor, startLine: start, endLine: end, text: item });
-                            }
-                        } else if (targetRanges && targetRanges[index]) {
-                            // 存在对应的选择区域
-                            await editor.edit(editorContext => editorContext.replace(targetRanges[index], texts[index]))
-                        }
-                    })
-                })
+                await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor, index) => {
+                    const { ranges: targetRanges } = this.getSelectedInfo(editor);
+                    await this.traverseReplaceTexts(editor, texts, index, persistentFlag, targetRanges);
+                });
             } else if (targetEditorUri) {
                 // 没打开,使用这个
-                await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri) => {
+                await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri, index) => {
                     const editor = await this.openFile(uri);
                     if (editor) {
-                        // 具有多窗口
-                        await asyncForEach<string, Promise<void>>(texts, async (item, index) => {
-                            // 不存在对应的选择区域
-                            const { start, end } = await this.getAreaValue();
-                            // 判断是否大于文档最大行数，如果是
-                            const maxLine = editor.document.lineCount;
-                            if (start > maxLine) {
-                                // 大于，转为插入模式
-                                await this.insertText({ editor, text: item, line: maxLine + 1 });
-                            } else if (end > maxLine) {
-                                // 大于， start -> maxLine 匹配整个文件
-                                await this.replaceText({ editor, startLine: start, endLine: maxLine, text: item });
-                            } else {
-                                // 范围内
-                                await this.replaceText({ editor, startLine: start, endLine: end, text: item });
-                            }
-                        })
+                        await this.traverseReplaceTexts(editor, texts, index, persistentFlag);
                     }
-                })
+                });
             }
         } catch (error) {
             this.executeError(error);
         }
     }
 
+    // 遍历替换文本
+    async traverseReplaceTexts(editor: TextEditor, texts: Array<string>, index: number, persistentFlag: boolean, targetRanges?: Range[]): Promise<void> {
+        await asyncForEach<string, Promise<void>>(texts, async (item, num) => {
+            if (targetRanges && targetRanges[num]) {
+                // 存在对应的选择区域
+                await editor.edit(editorContext => editorContext.replace(targetRanges[num], texts[num]));
+            } else {
+                // 数据持久化  (只在第一个窗口提示输入)
+                let start = 1;
+                let end = 1;
+                if (index === 0 && persistentFlag) {
+                    const { start, end } = await this.getAreaValue();
+                    this.persistentInputArray.push({ start, end });
+                } else if (!persistentFlag) {
+                    const returnValue = await this.getAreaValue();
+                    start = returnValue.start;
+                    end = returnValue.end;
+                }
+
+                // 判断是否大于文档最大行数，如果是
+                const maxLine = editor.document.lineCount;
+                start = persistentFlag ? this.persistentInputArray[num].start! : start;
+                end = persistentFlag ? this.persistentInputArray[num].end! : end;
+
+                if (start > maxLine) {
+                    // 大于，转为插入模式
+                    await this.insertText({ editor, text: item, line: maxLine + 1 });
+                } else if (end > maxLine) {
+                    // 大于， start -> maxLine 匹配整个文件
+                    await this.replaceText({ editor, startLine: start, endLine: maxLine, text: item });
+                } else {
+                    // 范围内
+                    await this.replaceText({ editor, startLine: start, endLine: end, text: item });
+                }
+            }
+        });
+    }
+
+    // 文本替换
     async replaceText(params: ReplaceTextParams): Promise<void> {
         try {
             const { editor, startLine, endLine, text } = params;
@@ -169,6 +188,10 @@ export class Main extends BaseClass implements IMain {
         }
     }
 
+    // *********************
+    // Update Function 
+    // *********************
+
     // 执行更新操作  
     async executeUpdate(): Promise<void> {
         try {
@@ -177,129 +200,81 @@ export class Main extends BaseClass implements IMain {
 
             // 进行数据组装
             const { originEditor, targetEditors, targetEditorUri } = await this.getEditors();
-            if (!originEditor || ((!targetEditors || targetEditors.length == 0)
-                && (!targetEditorUri || targetEditorUri.length === 0))) return;
+            if (!originEditor || ((!targetEditors || targetEditors.length === 0)
+                && (!targetEditorUri || targetEditorUri.length === 0))) { return; }
 
             const { ranges, texts } = this.getSelectedInfo(originEditor);
-            if (!ranges || !texts) return;
+            if (!ranges || !texts) { return; }
+
+            // 持久化开关
+            const persistentFlag = this.getConfig('persistentInput') as boolean;
+            this.persistentInputArray = [];
 
             if (targetEditors && targetEditors.length > 0) {
                 // 具有多窗口
-                await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor) => {
+                await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor, index) => {
                     const { ranges: targetRanges, texts: targetTexts } = this.getSelectedInfo(editor);
-                    await asyncForEach<string, Promise<void>>(texts, async (item, index) => {
-                        if (!targetTexts || !targetTexts[index]) {
-                            // 不存在对应的选择区域
-                            const { start, end } = await this.getAreaValue();
-                            // 判断是否大于文档最大行数，如果是
-                            const maxLine = editor.document.lineCount;
-                            if (start > maxLine) {
-                                // 大于，转为插入模式
-                                await this.insertText({ editor, text: item, line: maxLine + 1 });
-                            } else if (end > maxLine) {
-                                // 大于， start -> maxLine 对比整个文件
-                                const range = new Range(new Position(start - 1, 0), editor.document.lineAt(maxLine - 1).range.end);
-                                let targetText = editor.document.getText(range);
-                                let originTexts = item.split('\n');
-                                let targetTexts = targetText.split('\n');
-                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
-                            } else {
-                                // 范围内
-                                const range = new Range(new Position(start - 1, 0), editor.document.lineAt(end - 1).range.end);
-                                let targetText = editor.document.getText(range);
-                                let originTexts = item.split('\n');
-                                let targetTexts = targetText.split('\n');
-                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
-                            }
-                        } else if (targetRanges && targetRanges[index] && targetTexts) {
-                            // 存在对应的选择区域
-                            let originTexts = item.split('\n');
-                            let targetText = targetTexts[index].split('\n');
-                            await this.updateText({ originText: originTexts, targetText, editor, range: targetRanges[index] });
-                        }
-                    })
-                })
+                    await this.traverseUpdateTexts(editor, texts, index, persistentFlag, targetRanges, targetTexts);
+                });
             } else if (targetEditorUri) {
-                await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri) => {
+                await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri, index) => {
                     const editor = await this.openFile(uri);
                     if (editor) {
-                        await asyncForEach<string, Promise<void>>(texts, async (item) => {
-                            // 不存在对应的选择区域
-                            const { start, end } = await this.getAreaValue();
-                            // 判断是否大于文档最大行数，如果是
-                            const maxLine = editor.document.lineCount;
-                            if (start > maxLine) {
-                                // 大于，转为插入模式
-                                await this.insertText({ editor, text: item, line: maxLine + 1 });
-                            } else if (end > maxLine) {
-                                // 大于， start -> maxLine 对比整个文件
-                                const range = new Range(new Position(start - 1, 0), editor.document.lineAt(maxLine - 1).range.end);
-                                let targetText = editor.document.getText(range);
-                                let originTexts = item.split('\n');
-                                let targetTexts = targetText.split('\n');
-                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
-                            } else {
-                                // 范围内
-                                const range = new Range(new Position(start - 1, 0), editor.document.lineAt(end - 1).range.end);
-                                let targetText = editor.document.getText(range);
-                                let originTexts = item.split('\n');
-                                let targetTexts = targetText.split('\n');
-                                await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
-                            }
-                        })
+                        await this.traverseUpdateTexts(editor, texts, index, persistentFlag);
                     }
-                })
-            }
-        } catch (error) {
-            this.executeError(error);
-        }
-    }
-
-    // 获取到选择的区域信息
-    getSelectedInfo(editor: TextEditor): Partial<ReturnSelectedInfo> {
-        try {
-            let ranges: Array<Range> = [];
-            let texts: Array<string> = [];
-            let selections = editor.selections;
-
-            let noEmptySelect = selections.filter(item =>
-                item.start.line !== item.end.line ||
-                item.start.character !== item.end.character);
-
-            noEmptySelect.sort((pre, next) => pre.start.line - next.start.line);
-
-            noEmptySelect.forEach(item => {
-                const range = new Range(item.start, item.end);
-                ranges.push(range);
-                texts.push(editor.document.getText(range));
-            })
-            return { ranges, texts };
-        } catch (error) {
-            this.executeError(error);
-            return {};
-        }
-    }
-
-    async getAreaValue(): Promise<{ start: number, end: number }> {
-        const result = await window.showInputBox({ placeHolder: 'Start line/End line (select matching area)' });
-        if (result === undefined) {
-            throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
-        } else {
-            const splits = result.split('/');
-            if (typeof +splits[0] !== 'number' || typeof +splits[1] !== 'number'
-                || +splits[0] < 1 || +splits[1] < 1
-            ) {
-                Logger.warn({
-                    type: WarnEnum.ILLEGAL_INPUT_VALUE,
-                    data: '区域数据不合法,请重新输入'
                 });
-                return this.getAreaValue();
-            } else {
-                const start = Math.round(Math.min(+splits[0], +splits[1])) || 1;
-                const end = Math.round(Math.max(+splits[0], +splits[1])) || 1;
-                return { start, end };
             }
+        } catch (error) {
+            this.executeError(error);
         }
+    }
+
+    // 遍历更新文本
+    async traverseUpdateTexts(editor: TextEditor, texts: Array<string>, index: number, persistentFlag: boolean, targetRanges?: Range[], targetTexts?: string[]): Promise<void> {
+        await asyncForEach<string, Promise<void>>(texts, async (item, num) => {
+            if (!targetTexts || !targetTexts[num]) {
+                // 数据持久化  (只在第一个窗口提示输入)
+                let start = 1;
+                let end = 1;
+                if (index === 0 && persistentFlag) {
+                    const { start, end } = await this.getAreaValue();
+                    this.persistentInputArray.push({ start, end });
+                } else if (!persistentFlag) {
+                    const returnValue = await this.getAreaValue();
+                    start = returnValue.start;
+                    end = returnValue.end;
+                }
+
+                // 判断是否大于文档最大行数，如果是
+                const maxLine = editor.document.lineCount;
+                start = persistentFlag ? this.persistentInputArray[num].start! : start;
+                end = persistentFlag ? this.persistentInputArray[num].end! : end;
+
+                if (start > maxLine) {
+                    // 大于，转为插入模式
+                    await this.insertText({ editor, text: item, line: maxLine + 1 });
+                } else if (end > maxLine) {
+                    // 大于， start -> maxLine 对比整个文件
+                    const range = new Range(new Position(start - 1, 0), editor.document.lineAt(maxLine - 1).range.end);
+                    let targetText = editor.document.getText(range);
+                    let originTexts = item.split('\n');
+                    let targetTexts = targetText.split('\n');
+                    await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
+                } else {
+                    // 范围内
+                    const range = new Range(new Position(start - 1, 0), editor.document.lineAt(end - 1).range.end);
+                    let targetText = editor.document.getText(range);
+                    let originTexts = item.split('\n');
+                    let targetTexts = targetText.split('\n');
+                    await this.updateText({ originText: originTexts, targetText: targetTexts, editor, range });
+                }
+            } else if (targetRanges && targetRanges[num] && targetTexts) {
+                // 存在对应的选择区域
+                let originTexts = item.split('\n');
+                let targetText = targetTexts[num].split('\n');
+                await this.updateText({ originText: originTexts, targetText, editor, range: targetRanges[num] });
+            }
+        });
     }
 
     // 更新文本
@@ -329,7 +304,7 @@ export class Main extends BaseClass implements IMain {
                         targetText,
                         deleteLine,
                         count: item.count ?? 0
-                    }
+                    };
                     targetText = this.deleteText(params);
                 } else if (item.added) {
                     const params = {
@@ -338,7 +313,7 @@ export class Main extends BaseClass implements IMain {
                         targetText,
                         addLine,
                         count: item.count ?? 0
-                    }
+                    };
                     targetText = this.addText(params);
                     addLine += item.count ?? 0;
                     deleteLine += item.count ?? 0;
@@ -348,7 +323,7 @@ export class Main extends BaseClass implements IMain {
                     deleteLine += item.count ?? 0;
                     originLine += item.count ?? 0;
                 }
-            })
+            });
             await editor.edit(editorContext => editorContext.replace(range, targetText.join('\n')));
         } catch (error) {
             this.executeError(error);
@@ -373,7 +348,7 @@ export class Main extends BaseClass implements IMain {
     deleteText(params: DeleteTextParams): Array<string> {
         try {
             const { targetText, deleteLine, count } = params;
-            targetText.splice(deleteLine, count)
+            targetText.splice(deleteLine, count);
             return targetText;
         } catch (error) {
             this.executeError(error);
@@ -414,17 +389,17 @@ export class Main extends BaseClass implements IMain {
     // 生成fields
     generalFields(rows: string[]): Field[] {
         try {
-            let Fields: Field[] = []
+            let Fields: Field[] = [];
             // all -> all不用对数组进行分割
             if (this.operate?.value === OPERATE['All   ->  All']) {
-                Fields = rows.map((item) => ({ left: '', right: '', all: item }))
+                Fields = rows.map((item) => ({ left: '', right: '', all: item }));
             } else {
                 Fields = rows.map((item) => {
                     let mid = item.indexOf(this.delimiter);
                     let left = item.substring(0, mid);
                     let right = item.substring(mid + 1, item.length);
-                    return { left, right, all: item }
-                })
+                    return { left, right, all: item };
+                });
             }
             return Fields;
         } catch (error) {
@@ -439,15 +414,15 @@ export class Main extends BaseClass implements IMain {
             let result = '';
             switch (this.operate?.value) {
                 case OPERATE['All   ->  All']: {
-                    result = Fields.map(item => item.all).join('\n')
+                    result = Fields.map(item => item.all).join('\n');
                     break;
                 }
                 case OPERATE['Right ->  All']: {
-                    result = Fields.map(item => item.right).join('\n')
+                    result = Fields.map(item => item.right).join('\n');
                     break;
                 }
                 case OPERATE['Left  ->  All']: {
-                    result = Fields.map(item => item.left).join('\n')
+                    result = Fields.map(item => item.left).join('\n');
                     break;
                 }
             }
@@ -457,6 +432,10 @@ export class Main extends BaseClass implements IMain {
             return '';
         }
     }
+
+    // *********************
+    // Error Function 
+    // *********************
 
     // 处理错误
     executeError(error: unknown) {
