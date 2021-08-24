@@ -2,7 +2,7 @@
 	"name": "file-teleport",
 	"displayName": "File Teleport",
 	"description": "The contents of one file are transferred to other files",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"publisher": "AKclown",
 	"engines": {
 		"vscode": "^1.46.0"
