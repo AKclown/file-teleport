@@ -296,6 +296,8 @@ export class Main extends BaseClass implements IMain {
             // 对比不同
             let diffText = diffLines(targetCompareText, originCompareText);
 
+            console.log(diffText, 'diffText');
+
             // 造出数据来，一次性replace掉
             diffText.forEach(item => {
                 // 判断数据是否更改了 (行数需要移动)
@@ -431,6 +433,24 @@ export class Main extends BaseClass implements IMain {
             this.executeError(error);
             return '';
         }
+    }
+
+    // *********************
+    // Diff Function 
+    // *********************
+
+    // 处理文件对比
+    executeDiff() {
+        /**
+         * 需求:仔细研究了一下git history的diff，他是分别区分更新、删除、新增 。 如下逻辑处理步骤：
+         * 1. 找出文件中对应的行 ---  更新
+         * 2. 找出删除行
+         * 3. 找出新增行
+         * 
+         * 问题: 点击删除再点击新增， 与先点击新增再点击删除，对应的行数结果 也会不一样应该怎么解决?
+         */
+
+
     }
 
     // *********************
