@@ -15,8 +15,8 @@ export class BaseClass implements IBaseClass {
     // 获取到配置信息
     getConfig(config: ConfigType): Array<string> | boolean {
         const EMPTY = config === 'multipleFilePath' ? [] : false;
-        console.log( workspace.getConfiguration().get(config));
-        
+        console.log(workspace.getConfiguration().get(config));
+
         return workspace.getConfiguration().get(config) || EMPTY;
     }
 
@@ -60,8 +60,6 @@ export class BaseClass implements IBaseClass {
                         }
                     });
                 }
-                console.log(targetEditorUri, '212121');
-
                 return { originEditor, targetEditors: [], targetEditorUri };
             }
         } catch (error) {
@@ -79,9 +77,9 @@ export class BaseClass implements IBaseClass {
         try {
             const document = await workspace.openTextDocument(uri);
             return await window.showTextDocument(document, options ?? { preview: false });
-        } catch (error) {
+        } catch (error: any) {
             // 文件名不存在导致的异常
-            if (error.message.search(/cannot open/gm)) {
+            if (error?.message?.search(/cannot open/gm)) {
                 Logger.warn({
                     type: WarnEnum.FILE_OPENING_EXCEPTION,
                     data: `Operate file ${basename(uri.path)}  unsuccessfully, please check whether the file is normal`

@@ -1,5 +1,6 @@
 ## [1.1.0] - 2021-08-24
-1. [#1](https://github.com/AKclown/file-teleport/issues/1)
+1. [#1](https://github.com/AKclown/file-teleport/issues/1) 
+    - ![1-template.png](./images/1-template.png)
 2. 输入数据持久化设置
 3. 复用重用逻辑 
 4. 修复已开文件窗口再次打开

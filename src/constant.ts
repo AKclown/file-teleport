@@ -6,7 +6,9 @@ export enum COMMANDS {
     FILE_TELEPORT_UPDATE = 'file.teleport.update',
     FILE_TELEPORT_INSERT = 'file.teleport.insert',
     FILE_TELEPORT_REPLACE = 'file.teleport.replace',
-    OPEN_FILE = 'file.teleport.openFile'
+    FILE_TELEPORT_COMPARED = 'file.teleport.compared',
+    OPEN_FILE = 'file.teleport.openFile',
+
 }
 
 // *********************

@@ -1,10 +1,14 @@
-import { window, Range, TextEditor, Position, QuickPickItem, Uri } from 'vscode';
+import { window, Range, TextEditor, Position, QuickPickItem, Uri, OverviewRulerLane } from 'vscode';
 import { AddTextParams, DeleteTextParams, Field, IMain, InsertTextParams, OPERATE, ReplaceTextParams, ReturnSelectedInfo, UpdateTextParams } from './interface/Main.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
-import { diffLines } from 'diff';
+import { createTwoFilesPatch, diffLines } from 'diff';
 import { Logger } from './Logger';
 import { ErrorEnum, OtherEnum } from './interface/Logger.interface';
+import { parse } from 'diff2html';
+import add from '../images/add.png';
+import update from '../images/update.png';
+import minus from '../images/minus.png';
 
 export class Main extends BaseClass implements IMain {
 
@@ -440,17 +444,137 @@ export class Main extends BaseClass implements IMain {
     // *********************
 
     // 处理文件对比
-    executeDiff() {
+    async executeCompared(): Promise<void> {
+
+        // 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
+        await this.getCondition();
+
+        // 进行数据组装
+        const { originEditor, targetEditors, targetEditorUri } = await this.getEditors();
+        if (!originEditor || ((!targetEditors || targetEditors.length === 0)
+            && (!targetEditorUri || targetEditorUri.length === 0))) { return; }
+
+        if (targetEditors && targetEditors.length > 0) {
+            // 将内容插入另外编辑器相同内容  
+            await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor, index) => {
+                await this.traverseComparedTexts(originEditor, editor);
+            });
+        } else if (targetEditorUri) {
+            await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri, index) => {
+                const editor = await this.openFile(uri);
+                if (editor) {
+                }
+            });
+        }
+
+
+    }
+
+    // 遍历对比文本
+    async traverseComparedTexts(originEditor: TextEditor, targetEditor: TextEditor): Promise<void> {
+        // 找到origin窗口的所有数据
+        const originFirstLine = originEditor.document.lineAt(0);
+        const originLastLine = originEditor.document.lineAt(originEditor.document.lineCount - 1);
+        const originRange = new Range(originFirstLine.range.start, originLastLine.range.end);
+        const originText = originEditor.document.getText(originRange).split('\n');
+        const originFiles = this.generalFields(originText);
+        const originComparedText = this.assembleCompareData(originFiles);
+
+        // 获取到target窗口的的文本
+        const targetFirstLine = targetEditor.document.lineAt(0);
+        const targetLastLine = targetEditor.document.lineAt(targetEditor.document.lineCount - 1);
+        const targetRange = new Range(targetFirstLine.range.start, targetLastLine.range.end);
+        const targetText = targetEditor.document.getText(targetRange).split('\n');
+        const targetFiles = this.generalFields(targetText);
+        const targetComparedText = this.assembleCompareData(targetFiles);
         /**
-         * 需求:仔细研究了一下git history的diff，他是分别区分更新、删除、新增 。 如下逻辑处理步骤：
-         * 1. 找出文件中对应的行 ---  更新
-         * 2. 找出删除行
-         * 3. 找出新增行
+         * 更新: old和new的相同行数，old有delete new有insert (注意 这里需要记录前面的new新增  old删除的行数，否则不对应)
+         * 删除: 该行只有old delete相关操作
+         * 插入: 改行只有new insert相关操作
          * 
-         * 问题: 点击删除再点击新增， 与先点击新增再点击删除，对应的行数结果 也会不一样应该怎么解决?
+         * - 如何记录每个改动行的对应操作 [ ,'update']  [ ,'insert']  [ ,'delete']
+         * 
+         * $ 问题: 目前没有办法多个窗口一起进行对比，只能origin 和 一个target窗口进行对比，因此对比结果会对彼此都进行影响
          */
 
+        // 获取到diff2html所需要的 diff string
+        let diffString = createTwoFilesPatch("target", "origin", targetComparedText, originComparedText);
 
+        const diffInfo = parse(diffString, {
+            drawFileList: true,
+            matching: 'lines',
+            outputFormat: 'side-by-side'
+        });
+
+        let diffLines = diffInfo[0].blocks[0].lines;
+
+        let diff = diffLines.filter(i => i.type !== 'context');
+
+        //  记录新增和删除，相差的数值，0、1
+        let moreInsert = 0;
+        let moreDelete = 0;
+
+        // 记录差异行数  -  数据结构: [[行数， update | insert | delete]]  操作
+        let diffEffect = new Map([]);
+
+        while (diff.length > 0) {
+            // 找到与之对应的line，如果存在则为update，不存在则对应操作
+            let origin = diff[0];
+            // 记录是否存在对应的操作
+            let isSame = false;
+            for (let i = 1; i < diff.length; i++) {
+                // 找到与之对应的数据，判断操作类型，记录对应行数。 这个数据好像只有先删除后新增，没有先新增后删除的
+                if (origin.type === 'delete' && diff[i].type === 'insert' && (origin.oldNumber + moreInsert) === ((diff[i].newNumber ?? 0) + moreDelete)) {
+                    diffEffect.set(origin.oldNumber + moreInsert, 'update');
+                    isSame = true;
+                    diff.splice(i, 1);
+                    break;
+                }
+            }
+
+            // 没有对应的操作
+            if (!isSame) {
+                if (origin.type === 'delete') {
+                    diffEffect.set(origin.oldNumber + moreInsert, 'delete');
+                    moreDelete++;
+                } else if (origin.type === 'insert') {
+                    diffEffect.set(origin.newNumber + moreDelete, 'insert');
+                    moreInsert++;
+                }
+            }
+            diff.splice(0, 1);
+        }
+
+        // 给对应行，添加对应操作的图标
+
+        diffEffect.forEach((value, key) => {
+            switch(value){
+                case 'insert' : {
+                    let addDecorationType = window.createTextEditorDecorationType({
+                        gutterIconPath: add,
+                        overviewRulerLane: OverviewRulerLane.Full,
+                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)'
+                    });
+                    break;
+                }
+                case 'update' : {
+                    let updateDecorationType = window.createTextEditorDecorationType({
+                        gutterIconPath: update,
+                        overviewRulerLane: OverviewRulerLane.Full,
+                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)'
+                    });
+                    break;
+                }
+                case 'delete' : {
+                    let minusDecorationType = window.createTextEditorDecorationType({
+                        gutterIconPath: minus,
+                        overviewRulerLane: OverviewRulerLane.Full,
+                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)'
+                    });
+                    break;
+                }
+            }
+        });
     }
 
     // *********************

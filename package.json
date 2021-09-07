@@ -30,7 +30,9 @@
 		"onCommand:file.teleport.openFile",
 		"onCommand:file.teleport.update",
 		"onCommand:file.teleport.insert",
-		"onCommand:file.teleport.replace"
+		"onCommand:file.teleport.replace",
+		"onCommand:file.teleport.compared"
+
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -54,6 +56,11 @@
 				"category": "File Teleport",
 				"command": "file.teleport.replace",
 				"title": "Replace Text"
+			},
+			{
+				"category": "File Teleport",
+				"command": "file.teleport.compared",
+				"title": "Compared Text"
 			}
 		],
 		"configuration": [
@@ -89,24 +96,28 @@
 			"editor/context": [
 				{
 					"submenu": "file.teleport.editor.context",
-					"group": "1_modification",
-					"when": "editorHasSelection"
+					"group": "1_modification"
 				}
 			],
 			"file.teleport.editor.context": [
 				{
 					"command": "file.teleport.update",
 					"group": "1_modification",
-					"when": "editorTextFocus"
+					"when": "editorHasSelection"
 				},
 				{
 					"command": "file.teleport.insert",
 					"group": "1_modification",
-					"when": "editorTextFocus"
+					"when": "editorHasSelection"
 				},
 				{
 					"command": "file.teleport.replace",
-					"group": "1_modification@1",
+					"group": "1_modification",
+					"when": "editorHasSelection"
+				},
+				{
+					"command": "file.teleport.compared",
+					"group": "1_modification",
 					"when": "editorTextFocus"
 				}
 			]
@@ -135,6 +146,12 @@
 				"key": "alt+y",
 				"mac": "alt+y",
 				"when": "editorHasSelection"
+			},
+			{
+				"command": "file.teleport.compared",
+				"key": "alt+u",
+				"mac": "alt+u",
+				"when": "editorHasSelection"
 			}
 		]
 	},
@@ -161,6 +178,7 @@
 	},
 	"dependencies": {
 		"@types/diff": "^5.0.0",
-		"diff": "^5.0.0"
+		"diff": "^5.0.0",
+		"diff2html": "^3.4.11"
 	}
 }

@@ -28,6 +28,12 @@ export function activate(context: ExtensionContext) {
 			mainInstant
 		);
 
+		const comparedDisposable = commands.registerCommand(
+			COMMANDS.FILE_TELEPORT_COMPARED,
+			mainInstant.executeCompared,
+			mainInstant
+		);
+
 		const openFileDisposable = commands.registerCommand(
 			COMMANDS.OPEN_FILE,
 			mainInstant.executeOpenFile,
@@ -43,6 +49,7 @@ export function activate(context: ExtensionContext) {
 			insertDisposable,
 			replaceDisposable,
 			openFileDisposable,
+			comparedDisposable
 		);
 	} catch (error) {
 		Logger.error({
