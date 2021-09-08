@@ -1,14 +1,14 @@
-import { window, Range, TextEditor, Position, QuickPickItem, Uri, OverviewRulerLane } from 'vscode';
-import { AddTextParams, DeleteTextParams, Field, IMain, InsertTextParams, OPERATE, ReplaceTextParams, ReturnSelectedInfo, UpdateTextParams } from './interface/Main.interface';
+import { window, Range, TextEditor, Position, QuickPickItem, Uri, OverviewRulerLane, ExtensionContext } from 'vscode';
+import { AddTextParams, DeleteTextParams, EffectOperate, Field, IMain, InsertTextParams, OPERATE, ReplaceTextParams, ReturnSelectedInfo, UpdateTextParams } from './interface/Main.interface';
 import { asyncForEach } from './constant';
 import { BaseClass } from './BaseClass';
 import { createTwoFilesPatch, diffLines } from 'diff';
 import { Logger } from './Logger';
 import { ErrorEnum, OtherEnum } from './interface/Logger.interface';
 import { parse } from 'diff2html';
-import add from '../images/add.png';
-import update from '../images/update.png';
-import minus from '../images/minus.png';
+// import addIcon from '../images/add.png';
+// import update from '../images/update.png';
+// import minus from '../images/minus.png';
 
 export class Main extends BaseClass implements IMain {
 
@@ -444,7 +444,7 @@ export class Main extends BaseClass implements IMain {
     // *********************
 
     // 处理文件对比
-    async executeCompared(): Promise<void> {
+    async executeCompared(context: ExtensionContext): Promise<void> {
 
         // 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
         await this.getCondition();
@@ -457,7 +457,7 @@ export class Main extends BaseClass implements IMain {
         if (targetEditors && targetEditors.length > 0) {
             // 将内容插入另外编辑器相同内容  
             await asyncForEach<TextEditor, Promise<void>>(targetEditors, async (editor, index) => {
-                await this.traverseComparedTexts(originEditor, editor);
+                await this.traverseComparedTexts(context, originEditor, editor);
             });
         } else if (targetEditorUri) {
             await asyncForEach<Uri, Promise<void>>(targetEditorUri, async (uri, index) => {
@@ -471,7 +471,7 @@ export class Main extends BaseClass implements IMain {
     }
 
     // 遍历对比文本
-    async traverseComparedTexts(originEditor: TextEditor, targetEditor: TextEditor): Promise<void> {
+    async traverseComparedTexts(context: ExtensionContext, originEditor: TextEditor, targetEditor: TextEditor): Promise<void> {
         // 找到origin窗口的所有数据
         const originFirstLine = originEditor.document.lineAt(0);
         const originLastLine = originEditor.document.lineAt(originEditor.document.lineCount - 1);
@@ -515,7 +515,7 @@ export class Main extends BaseClass implements IMain {
         let moreDelete = 0;
 
         // 记录差异行数  -  数据结构: [[行数， update | insert | delete]]  操作
-        let diffEffect = new Map([]);
+        let diffEffect = new Map<number, EffectOperate>([]);
 
         while (diff.length > 0) {
             // 找到与之对应的line，如果存在则为update，不存在则对应操作
@@ -546,31 +546,40 @@ export class Main extends BaseClass implements IMain {
         }
 
         // 给对应行，添加对应操作的图标
+        diffEffect.forEach((value: EffectOperate, key: number) => {
+            console.log(key, 'key');
+            const range = new Range(key - 1, 0, key - 1, 0);
+            switch (value) {
+                case 'insert': {
+                    const addDecorationType = window.createTextEditorDecorationType({
+                        gutterIconPath: context.asAbsolutePath("images\\add.svg"),
+                        overviewRulerLane: OverviewRulerLane.Full,
+                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)',
+                        gutterIconSize: '80%',
+                    });
+                    targetEditor.setDecorations(addDecorationType, [range]);
 
-        diffEffect.forEach((value, key) => {
-            switch(value){
-                case 'insert' : {
-                    let addDecorationType = window.createTextEditorDecorationType({
-                        gutterIconPath: add,
-                        overviewRulerLane: OverviewRulerLane.Full,
-                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)'
-                    });
                     break;
                 }
-                case 'update' : {
-                    let updateDecorationType = window.createTextEditorDecorationType({
-                        gutterIconPath: update,
+
+                case 'update': {
+                    const updateDecorationType = window.createTextEditorDecorationType({
+                        gutterIconPath: context.asAbsolutePath("images\\update.svg"),
                         overviewRulerLane: OverviewRulerLane.Full,
-                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)'
+                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)',
+                        gutterIconSize: '65%',
                     });
+                    targetEditor.setDecorations(updateDecorationType, [range]);
                     break;
                 }
-                case 'delete' : {
-                    let minusDecorationType = window.createTextEditorDecorationType({
-                        gutterIconPath: minus,
+                case 'delete': {
+                    const minusDecorationType = window.createTextEditorDecorationType({
+                        gutterIconPath: context.asAbsolutePath("images\\minus.svg"),
                         overviewRulerLane: OverviewRulerLane.Full,
-                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)'
+                        overviewRulerColor: 'rgba(21, 126, 251, 0.7)',
+                        gutterIconSize: '80%',
                     });
+                    targetEditor.setDecorations(minusDecorationType, [range]);
                     break;
                 }
             }

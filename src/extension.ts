@@ -30,7 +30,7 @@ export function activate(context: ExtensionContext) {
 
 		const comparedDisposable = commands.registerCommand(
 			COMMANDS.FILE_TELEPORT_COMPARED,
-			mainInstant.executeCompared,
+			mainInstant.executeCompared.bind(mainInstant, context),
 			mainInstant
 		);
 
