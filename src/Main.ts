@@ -6,10 +6,6 @@ import { createTwoFilesPatch, diffLines } from 'diff';
 import { Logger } from './Logger';
 import { ErrorEnum, OtherEnum } from './interface/Logger.interface';
 import { parse } from 'diff2html';
-// import addIcon from '../images/add.png';
-// import update from '../images/update.png';
-// import minus from '../images/minus.png';
-
 export class Main extends BaseClass implements IMain {
 
     // 区域 对比区域->更新区域
@@ -299,8 +295,6 @@ export class Main extends BaseClass implements IMain {
 
             // 对比不同
             let diffText = diffLines(targetCompareText, originCompareText);
-
-            console.log(diffText, 'diffText');
 
             // 造出数据来，一次性replace掉
             diffText.forEach(item => {

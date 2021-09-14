@@ -1,0 +1,17 @@
+{
+    "file.teleport.views.Explorer.name": "选择内容转移文件",
+    "file.teleport.views.subMenus.label": "文件内容转移",
+    "file.teleport.commands.updateText.title": "更新文本",
+    "file.teleport.commands.insertText.title": "插入文本",
+    "file.teleport.commands.replaceText.title": "替换文本",
+    "file.teleport.configuration.multipleFilePath.description": "配置多文件路径 (基于根目录)",
+    "file.teleport.configuration.persistentInput.description": "记录输入的行数 (更新区域 \\插入行数 ...)",
+    "file.teleport.views.toSettingMultiFile.tip": "进入设置页面进行多文件路径配置",
+    "file.teleport.views.operateFileFailed.tip": "操作文件 ${basename(uri.path)}  失败, 请检查文件是否正常",
+    "file.teleport.views.illegalInsertedRows.tip": "插入的行数非法，请重新输入",
+    "file.teleport.views.illegalArea.tip": "区域数据无效，请重新输入",
+    "file.teleport.input.insertLine.label": "插入起始行数",
+    "file.teleport.input.matchingArea.label": "起始行数 /结束行数 (选择匹配区域)",
+    "file.teleport.input.comparisonAndUpdateArea.label": "选择 比较区域->更新区域（行为基准）",
+    "file.teleport.input.separator.label": "分割符"
+}

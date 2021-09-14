@@ -29,12 +29,24 @@ export class BaseClass implements IBaseClass {
         /**
          * 1. 最左边为origin  其余的都为target
          * 2. 如果可见窗口只有单个，那么匹配multipleFilePath, 如果没有提示去设置,有就打开它们。不以侧边栏的形式
+         * 3. 如果中途更改了编辑器聚焦，那么会导致第一个不是origin，因此需要判断viewColumn是不是1
          */
         try {
             const visibleEditor = window.visibleTextEditors;
 
             if (visibleEditor.length === 0) { return {}; }
-            let [originEditor, ...rest] = visibleEditor;
+
+            let originEditor: any = undefined;
+            let rest: Array<TextEditor> = [];
+
+            // 确保最左侧是origin窗口
+            visibleEditor.forEach(editor => {
+                if (editor.viewColumn === 1) {
+                    originEditor = editor;
+                } else {
+                    rest.push(editor);
+                }
+            });
 
             if (rest.length > 0) {
                 return { originEditor, targetEditors: rest };
@@ -49,7 +61,7 @@ export class BaseClass implements IBaseClass {
                     });
                 } else {
                     const name = workspace.name ?? '';
-                    const originPath = originEditor.document.uri.path;
+                    const originPath = originEditor.document?.uri?.path;
                     const rootPath = `${originPath.split(name)[0]}${name}`;
                     await asyncForEach<string, Promise<void>>(multipleFilePath, async (item, index) => {
                         const path = rootPath + (item.startsWith('/') ? item : `/${item}`);
@@ -119,7 +131,6 @@ export class BaseClass implements IBaseClass {
         if (startLine === undefined) {
             throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
         } else if (startLine && typeof +startLine === 'number') {
-            // startLine = startLine > 0 ? Math.round(+startLine) : 1;
             startLine = Math.max(Math.round(+startLine), 1);
             return startLine;
         } else {
@@ -146,7 +157,7 @@ export class BaseClass implements IBaseClass {
             ) {
                 Logger.warn({
                     type: WarnEnum.ILLEGAL_INPUT_VALUE,
-                    data: '区域数据不合法,请重新输入'
+                    data: 'The area data is invalid, please re-enter'
                 });
                 return await this.getAreaValue();
             } else {

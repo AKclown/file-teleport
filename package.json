@@ -30,9 +30,7 @@
 		"onCommand:file.teleport.openFile",
 		"onCommand:file.teleport.update",
 		"onCommand:file.teleport.insert",
-		"onCommand:file.teleport.replace",
-		"onCommand:file.teleport.compared"
-
+		"onCommand:file.teleport.replace"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -40,27 +38,22 @@
 			{
 				"category": "File Teleport",
 				"command": "file.teleport.openFile",
-				"title": "Select for Content Transfer"
+				"title": "%file.teleport.views.Explorer.name%"
 			},
 			{
 				"category": "File Teleport",
 				"command": "file.teleport.update",
-				"title": "Update Text"
+				"title": "%file.teleport.commands.updateText.title%"
 			},
 			{
 				"category": "File Teleport",
 				"command": "file.teleport.insert",
-				"title": "Insert Text"
+				"title": "%file.teleport.commands.insertText.title%"
 			},
 			{
 				"category": "File Teleport",
 				"command": "file.teleport.replace",
-				"title": "Replace Text"
-			},
-			{
-				"category": "File Teleport",
-				"command": "file.teleport.compared",
-				"title": "Compared Text"
+				"title": "%file.teleport.commands.replaceText.title%"
 			}
 		],
 		"configuration": [
@@ -74,13 +67,13 @@
 							"type": "string"
 						},
 						"default": [],
-						"description": "Configure multiple file paths (Based on the root directory)",
+						"description": "%file.teleport.configuration.multipleFilePath.description%",
 						"scope": "window"
 					},
 					"persistentInput": {
 						"type": "boolean",
 						"default": true,
-						"description": "Keep a record of the number of lines entered (Update area\\insert rows ...)"
+						"description": "%file.teleport.configuration.persistentInput.description%"
 					}
 				}
 			}
@@ -114,18 +107,13 @@
 					"command": "file.teleport.replace",
 					"group": "1_modification",
 					"when": "editorHasSelection"
-				},
-				{
-					"command": "file.teleport.compared",
-					"group": "1_modification",
-					"when": "editorTextFocus"
 				}
 			]
 		},
 		"submenus": [
 			{
 				"id": "file.teleport.editor.context",
-				"label": "File Content Transfer"
+				"label": "%file.teleport.views.subMenus.label%"
 			}
 		],
 		"keybindings": [
@@ -145,12 +133,6 @@
 				"command": "file.teleport.replace",
 				"key": "alt+y",
 				"mac": "alt+y",
-				"when": "editorHasSelection"
-			},
-			{
-				"command": "file.teleport.compared",
-				"key": "alt+u",
-				"mac": "alt+u",
 				"when": "editorHasSelection"
 			}
 		]
