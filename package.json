@@ -2,7 +2,7 @@
 	"name": "file-teleport",
 	"displayName": "File Teleport",
 	"description": "The contents of one file are transferred to other files",
-	"version": "1.0.1",
+	"version": "1.0.3",
 	"publisher": "AKclown",
 	"engines": {
 		"vscode": "^1.46.0"
@@ -146,6 +146,7 @@
 		"test": "node ./out/test/runTest.js"
 	},
 	"devDependencies": {
+		"@types/fs-extra": "^9.0.12",
 		"@types/glob": "^7.1.3",
 		"@types/mocha": "^8.0.4",
 		"@types/node": "^12.11.7",
@@ -160,7 +161,9 @@
 	},
 	"dependencies": {
 		"@types/diff": "^5.0.0",
+		"@types/hogan.js": "^3.0.1",
 		"diff": "^5.0.0",
-		"diff2html": "^3.4.11"
+		"diff2html": "^3.4.11",
+		"fs-extra": "^10.0.0"
 	}
 }

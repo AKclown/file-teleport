@@ -5,6 +5,7 @@ import { Logger } from './Logger';
 import { basename } from 'path';
 import { ErrorEnum, InfoEnum, WarnEnum, OtherEnum } from './interface/Logger.interface';
 import { ReturnSelectedInfo } from './interface/Main.interface';
+import localize from './localize';
 // 一些基础方法
 export class BaseClass implements IBaseClass {
 
@@ -56,7 +57,7 @@ export class BaseClass implements IBaseClass {
                 if (multipleFilePath.length === 0) {
                     Logger.info({
                         type: InfoEnum.TO_SETTING,
-                        data: 'Go to the settings page to configure the multi-file path configuration',
+                        data: localize("file.teleport.views.toSettingMultiFile.tip"),
                         items: ['ToSetting'],
                     });
                 } else {
@@ -91,10 +92,10 @@ export class BaseClass implements IBaseClass {
             return await window.showTextDocument(document, options ?? { preview: false });
         } catch (error: any) {
             // 文件名不存在导致的异常
-            if (error?.message?.search(/cannot open/gm)) {
+            if (error?.message?.search(/cannot open/gm) !== -1) {
                 Logger.warn({
                     type: WarnEnum.FILE_OPENING_EXCEPTION,
-                    data: `Operate file ${basename(uri.path)}  unsuccessfully, please check whether the file is normal`
+                    data: localize("file.teleport.views.operateFileFailed.tip", basename(uri.path))
                 });
             } else {
                 Logger.error({
@@ -113,8 +114,6 @@ export class BaseClass implements IBaseClass {
          * 2.自定义编辑模块，左边origin
          * 3. 如果以及窗口已经被打开那么
          */
-
-        console.log(args, '21212');
         await asyncForEach<Uri, Promise<void>>(args[1], async (uri: Uri, index) => {
             const viewColumn = index === 0 ? ViewColumn.One : ViewColumn.Beside;
             this.openFile(uri, { viewColumn });
@@ -127,7 +126,7 @@ export class BaseClass implements IBaseClass {
 
     // 获取插入行的文本
     async getInsertLine(line?: number): Promise<number> {
-        let startLine = line ?? await window.showInputBox({ placeHolder: 'Insert the number of start line' });
+        let startLine = line ?? await window.showInputBox({ placeHolder: localize("file.teleport.input.insertLine.label") });
         if (startLine === undefined) {
             throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
         } else if (startLine && typeof +startLine === 'number') {
@@ -136,7 +135,7 @@ export class BaseClass implements IBaseClass {
         } else {
             Logger.warn({
                 type: WarnEnum.ILLEGAL_INPUT_VALUE,
-                data: 'Illegal number of inserted rows, please re-enter'
+                data: localize("file.teleport.views.illegalInsertedRows.tip")
             });
             return await this.getInsertLine(line);
         }
@@ -144,7 +143,7 @@ export class BaseClass implements IBaseClass {
 
     // 获取到输入区域的值
     async getAreaValue(): Promise<{ start: number, end: number }> {
-        const result = await window.showInputBox({ placeHolder: 'Start line/End line (select matching area)' });
+        const result = await window.showInputBox({ placeHolder: localize("file.teleport.input.matchingArea.label") });
         if (result === undefined) {
             throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
         } else {
@@ -157,7 +156,7 @@ export class BaseClass implements IBaseClass {
             ) {
                 Logger.warn({
                     type: WarnEnum.ILLEGAL_INPUT_VALUE,
-                    data: 'The area data is invalid, please re-enter'
+                    data: localize("file.teleport.views.illegalArea.tip")
                 });
                 return await this.getAreaValue();
             } else {

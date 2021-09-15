@@ -7,11 +7,14 @@
     "file.teleport.configuration.multipleFilePath.description": "Configure multiple file paths (Based on the root directory)",
     "file.teleport.configuration.persistentInput.description": "Keep a record of the number of lines entered (Update area\\insert rows ...)",
     "file.teleport.views.toSettingMultiFile.tip": "Go to the settings page to configure the multi-file path configuration",
-    "file.teleport.views.operateFileFailed.tip": "Operate file ${basename(uri.path)}  unsuccessfully, please check whether the file is normal",
+    "file.teleport.views.operateFileFailed.tip": "Operate file {0} unsuccessfully, please check whether the file is normal",
     "file.teleport.views.illegalInsertedRows.tip": "Illegal number of inserted rows, please re-enter",
     "file.teleport.views.illegalArea.tip": "The area data is invalid, please re-enter",
     "file.teleport.input.insertLine.label": "Insert the number of start line",
     "file.teleport.input.matchingArea.label": "Start line/End line (select matching area)",
     "file.teleport.input.comparisonAndUpdateArea.label": "Select the comparison area -> Update area (behavior unit)",
-    "file.teleport.input.separator.label": "Separator"
+    "file.teleport.input.separator.label": "Separator",
+    "file.teleport.input.leftAndAll.label": "Left  ->  All",
+    "file.teleport.input.rightAndAll.label": "Right ->  All",
+    "file.teleport.input.AllAndAll.label": "All   ->  All"
 }

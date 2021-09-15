@@ -6,6 +6,7 @@ import { createTwoFilesPatch, diffLines } from 'diff';
 import { Logger } from './Logger';
 import { ErrorEnum, OtherEnum } from './interface/Logger.interface';
 import { parse } from 'diff2html';
+import localize from './localize';
 export class Main extends BaseClass implements IMain {
 
     // 区域 对比区域->更新区域
@@ -361,16 +362,16 @@ export class Main extends BaseClass implements IMain {
         this.operate = await window.showQuickPick<{ value: number } & QuickPickItem>(
             [
                 {
-                    label: OPERATE[0],
+                    label: localize("file.teleport.input.leftAndAll.label"),
                     value: OPERATE['Left  ->  All']
                 }, {
-                    label: OPERATE[1],
+                    label: localize("file.teleport.input.rightAndAll.label"),
                     value: OPERATE['Right ->  All']
                 }, {
-                    label: OPERATE[2],
+                    label: localize("file.teleport.input.AllAndAll.label"),
                     value: OPERATE['All   ->  All']
                 }
-            ], { placeHolder: 'Select the comparison area -> Update area (behavior unit)' });
+            ], { placeHolder: localize("file.teleport.input.comparisonAndUpdateArea.label") });
 
         if (this.operate === undefined) {
             throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
@@ -378,7 +379,7 @@ export class Main extends BaseClass implements IMain {
 
         if (this.operate?.value !== OPERATE['All   ->  All']) {
             // 匹配模式， 分割符， 以分隔符为中线， 条件 左/右/全部 ;  更新 左/右/全部
-            const result = await window.showInputBox({ placeHolder: 'Separator' });
+            const result = await window.showInputBox({ placeHolder: localize("file.teleport.input.separator.label") });
             if (result === undefined) {
                 throw new Error(OtherEnum.VOLUNTARILY_CANCEL);
             }
@@ -437,7 +438,7 @@ export class Main extends BaseClass implements IMain {
     // Diff Function 
     // *********************
 
-    // 处理文件对比
+    // todo 处理文件对比
     async executeCompared(context: ExtensionContext): Promise<void> {
 
         // 选择区域 -> 更新区域. 条件区域可以是left/right/all 更新区域只能all
@@ -464,7 +465,7 @@ export class Main extends BaseClass implements IMain {
 
     }
 
-    // 遍历对比文本
+    // todo 遍历对比文本
     async traverseComparedTexts(context: ExtensionContext, originEditor: TextEditor, targetEditor: TextEditor): Promise<void> {
         // 找到origin窗口的所有数据
         const originFirstLine = originEditor.document.lineAt(0);

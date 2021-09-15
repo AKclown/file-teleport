@@ -9,6 +9,7 @@
 1. 修复已知问题 
     - 目标窗口紊乱
 2. 汉化语言
+    - [vscode插件国际化实现](https://dev.to/foxgem/a-simple-way-to-internationlize-your-vs-code-extension-13je)
 
 ---
 ## [1.0.1] - 2021-08-24
