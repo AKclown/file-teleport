@@ -13,6 +13,8 @@ export class Localize {
 
   private init() {
     try {
+      console.log(process.env.VSCODE_NLS_CONFIG, '-process.env.VSCODE_NLS_CONFIG-');
+      
       this.options = {
         ...this.options,
         ...JSON.parse(process.env.VSCODE_NLS_CONFIG || "{}")
@@ -25,9 +27,9 @@ export class Localize {
   private format(message: string, args: string[] = []): string {
     return args.length
       ? message.replace(
-          /\{(\d+)\}/g,
-          (match, rest: any[]) => args[rest[0]] || match
-        )
+        /\{(\d+)\}/g,
+        (match, rest: any[]) => args[rest[0]] || match
+      )
       : message;
   }
 
@@ -86,5 +88,5 @@ export default Localize.prototype.localize.bind(new Localize());
 
 
 export interface ILanguagePack {
-    [key: string]: string;
-  }
+  [key: string]: string;
+}
